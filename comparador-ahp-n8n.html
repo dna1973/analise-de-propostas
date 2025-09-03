@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ferramenta AHP para análise e comparação de propostas de energia solar">
+    <meta name="keywords" content="AHP, energia solar, comparação, propostas, análise multicritério">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AHP Comparador">
+
+    <title>🏆 Comparador AHP - Análise de Propostas</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzI1NjNlYiIvPgo8cGF0aCBkPSJNMTYgNEM5LjM3IDQgNCA5LjM3IDQgMTZzNS4zNyAxMiAxMiAxMiAxMi01LjM3IDEyLTEyUzIyLjYzIDQgMTYgNHptLTIgMThsLTYtNiAyLTJsNCA0IDEwLTEwIDIgMi0xMiAxMnoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==">
+
+    <!-- CSS Grid e Flexbox moderno -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .main-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 1.5rem 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .form-input {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--bg-primary);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input:invalid {
+            border-color: var(--danger-color);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            min-height: 44px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-full {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .profile-card {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .profile-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .profile-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .result-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .result-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary-color);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .result-card.winner {
+            border-left-color: var(--success-color);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+        }
+
+        .result-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 1rem 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .result-score {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .result-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            transition: width 0.8s ease;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: white;
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Modo escuro */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1e293b;
+                --bg-secondary: #334155;
+                --bg-tertiary: #475569;
+                --text-primary: #f8fafc;
+                --text-secondary: #cbd5e1;
+                --border-color: #475569;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-card">
+            <header class="header">
+                <h1>🏆 Comparador de Propostas AHP</h1>
+                <p>Análise Hierárquica de Processos para Energia Solar</p>
+            </header>
+
+            <div class="content">
+                <!-- Formulário Avançado HTML5 -->
+                <form id="ahp-form" method="POST" novalidate>
+
+                    <!-- Seção 1: Empresas -->
+                    <section class="section">
+                        <h2 class="section-title">
+                            <span>🏢</span>
+                            1. Empresas Concorrentes
+                        </h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="empresa1">
+                                    <span>🥇</span>
+                                    Empresa 1
+                                </label>
+                                <input type="text" id="empresa1" name="empresa1" class="form-input" value="Empresa A"
+                                    required minlength="2" maxlength="50" placeholder="Nome da primeira empresa"
+                                    autocomplete="organization">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="empresa2">
+                                    <span>🥈</span>
+                                    Empresa 2
+                                </label>
+                                <input type="text" id="empresa2" name="empresa2" class="form-input" value="Empresa B"
+                                    required minlength="2" maxlength="50" placeholder="Nome da segunda empresa"
+                                    autocomplete="organization">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="empresa3">
+                                    <span>🥉</span>
+                                    Empresa 3 (opcional)
+                                </label>
+                                <input type="text" id="empresa3" name="empresa3" class="form-input" maxlength="50"
+                                    placeholder="Terceira empresa (opcional)" autocomplete="organization">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Seção 2: Dados das Propostas -->
+                    <section class="section">
+                        <h2 class="section-title">
+                            <span>📊</span>
+                            2. Dados das Propostas
+                        </h2>
+
+                        <fieldset style="border: none; padding: 0; margin: 0;">
+                            <legend
+                                style="font-size: 1.2rem; font-weight: 600; color: var(--primary-color); margin-bottom: 1rem;">
+                                🥇 Dados da Empresa 1
+                            </legend>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_valor"
+                                        data-tooltip="Valor total do investimento em reais">
+                                        <span>💰</span>
+                                        Valor Total (R$)
+                                    </label>
+                                    <input type="number" id="emp1_valor" name="emp1_valor" class="form-input"
+                                        step="0.01" min="1000" max="1000000" required placeholder="Ex: 45000.00"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_geracao"
+                                        data-tooltip="Energia gerada por mês em kWh">
+                                        <span>⚡</span>
+                                        Geração Prevista (kWh/mês)
+                                    </label>
+                                    <input type="number" id="emp1_geracao" name="emp1_geracao" class="form-input"
+                                        step="0.01" min="100" max="10000" required placeholder="Ex: 850.50"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_payback"
+                                        data-tooltip="Tempo para recuperar o investimento">
+                                        <span>📈</span>
+                                        Payback (anos)
+                                    </label>
+                                    <input type="number" id="emp1_payback" name="emp1_payback" class="form-input"
+                                        step="0.1" min="1" max="20" required placeholder="Ex: 5.2" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_eficiencia"
+                                        data-tooltip="Eficiência dos painéis solares">
+                                        <span>🔋</span>
+                                        Eficiência Painel (%)
+                                    </label>
+                                    <input type="number" id="emp1_eficiencia" name="emp1_eficiencia" class="form-input"
+                                        step="0.1" min="15" max="30" required placeholder="Ex: 22.1" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_garantia_painel"
+                                        data-tooltip="Garantia dos painéis solares">
+                                        <span>🛡️</span>
+                                        Garantia Painel (anos)
+                                    </label>
+                                    <input type="number" id="emp1_garantia_painel" name="emp1_garantia_painel"
+                                        class="form-input" min="10" max="30" required placeholder="Ex: 25"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label tooltip" for="emp1_garantia_inversor"
+                                        data-tooltip="Garantia do inversor">
+                                        <span>🔧</span>
+                                        Garantia Inversor (anos)
+                                    </label>
+                                    <input type="number" id="emp1_garantia_inversor" name="emp1_garantia_inversor"
+                                        class="form-input" min="5" max="20" required placeholder="Ex: 12"
+                                        autocomplete="off">
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset style="border: none; padding: 0; margin: 2rem 0 0 0;">
+                            <legend
+                                style="font-size: 1.2rem; font-weight: 600; color: var(--primary-color); margin-bottom: 1rem;">
+                                🥈 Dados da Empresa 2
+                            </legend>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_valor">
+                                        <span>💰</span>
+                                        Valor Total (R$)
+                                    </label>
+                                    <input type="number" id="emp2_valor" name="emp2_valor" class="form-input"
+                                        step="0.01" min="1000" max="1000000" required placeholder="Ex: 52000.00"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_geracao">
+                                        <span>⚡</span>
+                                        Geração Prevista (kWh/mês)
+                                    </label>
+                                    <input type="number" id="emp2_geracao" name="emp2_geracao" class="form-input"
+                                        step="0.01" min="100" max="10000" required placeholder="Ex: 920.75"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_payback">
+                                        <span>📈</span>
+                                        Payback (anos)
+                                    </label>
+                                    <input type="number" id="emp2_payback" name="emp2_payback" class="form-input"
+                                        step="0.1" min="1" max="20" required placeholder="Ex: 4.8" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_eficiencia">
+                                        <span>🔋</span>
+                                        Eficiência Painel (%)
+                                    </label>
+                                    <input type="number" id="emp2_eficiencia" name="emp2_eficiencia" class="form-input"
+                                        step="0.1" min="15" max="30" required placeholder="Ex: 23.5" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_garantia_painel">
+                                        <span>🛡️</span>
+                                        Garantia Painel (anos)
+                                    </label>
+                                    <input type="number" id="emp2_garantia_painel" name="emp2_garantia_painel"
+                                        class="form-input" min="10" max="30" required placeholder="Ex: 20"
+                                        autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="emp2_garantia_inversor">
+                                        <span>🔧</span>
+                                        Garantia Inversor (anos)
+                                    </label>
+                                    <input type="number" id="emp2_garantia_inversor" name="emp2_garantia_inversor"
+                                        class="form-input" min="5" max="20" required placeholder="Ex: 10"
+                                        autocomplete="off">
+                                </div>
+                            </div>
+                        </fieldset>
+                    </section>
+
+                    <!-- Seção 3: Perfil de Decisão -->
+                    <section class="section">
+                        <h2 class="section-title">
+                            <span>🎯</span>
+                            3. Perfil de Decisão
+                        </h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Escolha o perfil que melhor representa suas prioridades na tomada de decisão:
+                        </p>
+
+                        <div class="profile-grid">
+                            <label class="profile-card" for="conservador">
+                                <input type="radio" id="conservador" name="perfil_decisao" value="conservador"
+                                    style="display: none;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
+                                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">Conservador</h3>
+                                <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                                    Prioriza menor custo e retorno rápido do investimento
+                                </p>
+                                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                    • Valor: 35% • Payback: 30% • Outros: 35%
+                                </div>
+                            </label>
+
+                            <label class="profile-card selected" for="equilibrado">
+                                <input type="radio" id="equilibrado" name="perfil_decisao" value="equilibrado" checked
+                                    style="display: none;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚖️</div>
+                                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">Equilibrado</h3>
+                                <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                                    Balance entre custo, performance e qualidade
+                                </p>
+                                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                    • Distribuição equilibrada entre todos os critérios
+                                </div>
+                            </label>
+
+                            <label class="profile-card" for="performance">
+                                <input type="radio" id="performance" name="perfil_decisao" value="performance"
+                                    style="display: none;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🚀</div>
+                                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">Performance</h3>
+                                <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                                    Foca na máxima eficiência e geração de energia
+                                </p>
+                                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                    • Geração: 30% • Eficiência: 25% • Outros: 45%
+                                </div>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Botão de Análise -->
+                    <section class="section" style="text-align: center;">
+                        <button type="submit" class="btn btn-success btn-full">
+                            <span>🔍</span>
+                            Analisar Propostas com AHP
+                        </button>
+
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                            <p>Processando análise AHP...</p>
+                        </div>
+                    </section>
+                </form>
+
+                <!-- Área de Resultados -->
+                <div id="resultados" class="result-section">
+                    <section class="section">
+                        <h2 class="section-title">
+                            <span>🏆</span>
+                            Resultado da Análise AHP
+                        </h2>
+                        <div id="ranking-container" class="result-grid"></div>
+
+                        <div style="text-align: center; margin-top: 2rem;">
+                            <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                                <span>🔄</span>
+                                Nova Análise
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript moderno HTML5 para n8n
+        class AHPAnalyzer {
+            constructor() {
+                this.form = document.getElementById('ahp-form');
+                this.loadingEl = document.getElementById('loading');
+                this.resultadosEl = document.getElementById('resultados');
+                this.rankingContainer = document.getElementById('ranking-container');
+
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupFormValidation();
+                this.setupProfileSelection();
+            }
+
+            setupEventListeners() {
+                this.form.addEventListener('submit', this.handleSubmit.bind(this));
+
+                // Validação em tempo real
+                const inputs = this.form.querySelectorAll('input[type="number"]');
+                inputs.forEach(input => {
+                    input.addEventListener('input', this.validateInput.bind(this));
+                    input.addEventListener('blur', this.formatCurrency.bind(this));
+                });
+            }
+
+            setupFormValidation() {
+                const form = this.form;
+                form.addEventListener('invalid', (e) => {
+                    e.preventDefault();
+                    const firstInvalid = form.querySelector(':invalid');
+                    if (firstInvalid) {
+                        firstInvalid.focus();
+                        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, true);
+            }
+
+            setupProfileSelection() {
+                const profileCards = document.querySelectorAll('.profile-card');
+                const radioInputs = document.querySelectorAll('input[name="perfil_decisao"]');
+
+                profileCards.forEach(card => {
+                    card.addEventListener('click', () => {
+                        profileCards.forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                    });
+                });
+
+                radioInputs.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        profileCards.forEach(c => c.classList.remove('selected'));
+                        radio.closest('.profile-card').classList.add('selected');
+                    });
+                });
+            }
+
+            validateInput(e) {
+                const input = e.target;
+                const value = parseFloat(input.value);
+
+                // Validação customizada
+                if (input.name.includes('valor') && value < 1000) {
+                    input.setCustomValidity('Valor deve ser maior que R$ 1.000');
+                } else if (input.name.includes('eficiencia') && (value < 15 || value > 30)) {
+                    input.setCustomValidity('Eficiência deve estar entre 15% e 30%');
+                } else if (input.name.includes('payback') && (value < 1 || value > 20)) {
+                    input.setCustomValidity('Payback deve estar entre 1 e 20 anos');
+                } else {
+                    input.setCustomValidity('');
+                }
+            }
+
+            formatCurrency(e) {
+                const input = e.target;
+                if (input.name.includes('valor') && input.value) {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value)) {
+                        // Não formatar durante a digitação, apenas validar
+                        input.setAttribute('data-formatted-value',
+                            new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                            }).format(value)
+                        );
+                    }
+                }
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+
+                if (!this.form.checkValidity()) {
+                    this.form.reportValidity();
+                    return;
+                }
+
+                this.showLoading();
+
+                try {
+                    // Simula processamento assíncrono
+                    await this.delay(1500);
+
+                    const dados = this.collectFormData();
+                    const resultado = this.calculateAHP(dados);
+                    this.displayResults(resultado);
+
+                } catch (error) {
+                    console.error('Erro na análise:', error);
+                    alert('Erro ao processar análise. Tente novamente.');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            collectFormData() {
+                const formData = new FormData(this.form);
+                const dados = {};
+
+                for (let [key, value] of formData.entries()) {
+                    dados[key] = value;
+                }
+
+                return dados;
+            }
+
+            calculateAHP(dados) {
+                // Pesos por perfil de decisão (baseado em AHP)
+                const pesos = {
+                    conservador: {
+                        valor: 0.35,
+                        geracao: 0.10,
+                        payback: 0.30,
+                        eficiencia: 0.10,
+                        garantia_painel: 0.08,
+                        garantia_inversor: 0.07
+                    },
+                    equilibrado: {
+                        valor: 0.25,
+                        geracao: 0.20,
+                        payback: 0.20,
+                        eficiencia: 0.15,
+                        garantia_painel: 0.12,
+                        garantia_inversor: 0.08
+                    },
+                    performance: {
+                        valor: 0.15,
+                        geracao: 0.30,
+                        payback: 0.15,
+                        eficiencia: 0.25,
+                        garantia_painel: 0.10,
+                        garantia_inversor: 0.05
+                    }
+                };
+
+                const pesoEscolhido = pesos[dados.perfil_decisao];
+
+                // Monta array de empresas
+                const empresas = [
+                    {
+                        nome: dados.empresa1,
+                        valor: parseFloat(dados.emp1_valor),
+                        geracao: parseFloat(dados.emp1_geracao),
+                        payback: parseFloat(dados.emp1_payback),
+                        eficiencia: parseFloat(dados.emp1_eficiencia),
+                        garantia_painel: parseFloat(dados.emp1_garantia_painel),
+                        garantia_inversor: parseFloat(dados.emp1_garantia_inversor)
+                    },
+                    {
+                        nome: dados.empresa2,
+                        valor: parseFloat(dados.emp2_valor),
+                        geracao: parseFloat(dados.emp2_geracao),
+                        payback: parseFloat(dados.emp2_payback),
+                        eficiencia: parseFloat(dados.emp2_eficiencia),
+                        garantia_painel: parseFloat(dados.emp2_garantia_painel),
+                        garantia_inversor: parseFloat(dados.emp2_garantia_inversor)
+                    }
+                ];
+
+                // Adiciona terceira empresa se fornecida
+                if (dados.empresa3 && dados.empresa3.trim()) {
+                    // Para simplificar, usa médias se não houver dados da terceira empresa
+                    empresas.push({
+                        nome: dados.empresa3,
+                        valor: (empresas[0].valor + empresas[1].valor) / 2,
+                        geracao: (empresas[0].geracao + empresas[1].geracao) / 2,
+                        payback: (empresas[0].payback + empresas[1].payback) / 2,
+                        eficiencia: (empresas[0].eficiencia + empresas[1].eficiencia) / 2,
+                        garantia_painel: Math.round((empresas[0].garantia_painel + empresas[1].garantia_painel) / 2),
+                        garantia_inversor: Math.round((empresas[0].garantia_inversor + empresas[1].garantia_inversor) / 2)
+                    });
+                }
+
+                return this.processAHPScores(empresas, pesoEscolhido, dados.perfil_decisao);
+            }
+
+            processAHPScores(empresas, pesos, perfil) {
+                const criterios = ['valor', 'geracao', 'payback', 'eficiencia', 'garantia_painel', 'garantia_inversor'];
+                const criteriosCusto = ['valor', 'payback']; // Menor é melhor
+
+                // Calcula scores normalizados para cada empresa
+                empresas.forEach(empresa => {
+                    empresa.score = 0;
+                    empresa.detalhes = {};
+
+                    criterios.forEach(criterio => {
+                        const valores = empresas.map(e => e[criterio]);
+                        const min = Math.min(...valores);
+                        const max = Math.max(...valores);
+
+                        let scoreNormalizado;
+                        if (criteriosCusto.includes(criterio)) {
+                            // Para custos: menor valor = maior score
+                            scoreNormalizado = max === min ? 5 : 5 - ((empresa[criterio] - min) / (max - min)) * 4;
+                        } else {
+                            // Para benefícios: maior valor = maior score
+                            scoreNormalizado = max === min ? 5 : 1 + ((empresa[criterio] - min) / (max - min)) * 4;
+                        }
+
+                        const contribuicao = scoreNormalizado * pesos[criterio];
+                        empresa.score += contribuicao;
+
+                        empresa.detalhes[criterio] = {
+                            valor: empresa[criterio],
+                            score: scoreNormalizado,
+                            peso: pesos[criterio],
+                            contribuicao: contribuicao
+                        };
+                    });
+
+                    empresa.percentual = (empresa.score / 5) * 100;
+                });
+
+                // Ordena por score
+                empresas.sort((a, b) => b.score - a.score);
+
+                return {
+                    empresas,
+                    perfil,
+                    pesos,
+                    timestamp: new Date()
+                };
+            }
+
+            displayResults(resultado) {
+                const { empresas, perfil } = resultado;
+
+                this.rankingContainer.innerHTML = '';
+
+                empresas.forEach((empresa, index) => {
+                    const card = this.createResultCard(empresa, index);
+                    this.rankingContainer.appendChild(card);
+                });
+
+                this.resultadosEl.classList.add('show');
+                this.resultadosEl.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            createResultCard(empresa, index) {
+                const isWinner = index === 0;
+                const card = document.createElement('div');
+                card.className = `result-card ${isWinner ? 'winner' : ''}`;
+
+                const medalha = ['🥇', '🥈', '🥉'][index] || `${index + 1}º`;
+
+                card.innerHTML = `
+                    <div class="result-title">
+                        <span style="font-size: 1.5rem;">${medalha}</span>
+                        <span>${empresa.nome}</span>
+                        ${isWinner ? '<span>🏆</span>' : ''}
+                    </div>
+                    
+                    <div class="result-score">${empresa.score.toFixed(2)}/5.00</div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${empresa.percentual}%"></div>
+                    </div>
+                    
+                    <div class="result-details">
+                        <div class="result-detail">
+                            <span>💰 Valor:</span>
+                            <strong>${new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(empresa.valor)}</strong>
+                        </div>
+                        <div class="result-detail">
+                            <span>⚡ Geração:</span>
+                            <strong>${empresa.geracao} kWh/mês</strong>
+                        </div>
+                        <div class="result-detail">
+                            <span>📈 Payback:</span>
+                            <strong>${empresa.payback} anos</strong>
+                        </div>
+                        <div class="result-detail">
+                            <span>🔋 Eficiência:</span>
+                            <strong>${empresa.eficiencia}%</strong>
+                        </div>
+                        <div class="result-detail">
+                            <span>🛡️ Garantia Painel:</span>
+                            <strong>${empresa.garantia_painel} anos</strong>
+                        </div>
+                        <div class="result-detail">
+                            <span>🔧 Garantia Inversor:</span>
+                            <strong>${empresa.garantia_inversor} anos</strong>
+                        </div>
+                    </div>
+                `;
+
+                return card;
+            }
+
+            showLoading() {
+                this.loadingEl.style.display = 'block';
+                this.form.style.opacity = '0.5';
+                this.form.style.pointerEvents = 'none';
+            }
+
+            hideLoading() {
+                this.loadingEl.style.display = 'none';
+                this.form.style.opacity = '1';
+                this.form.style.pointerEvents = 'auto';
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Inicializa quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            new AHPAnalyzer();
+        });
+
+        // Service Worker para cache (opcional)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registrado'))
+                    .catch(error => console.log('SW falhou'));
+            });
+        }
+    </script>
+</body>
+
+</html>

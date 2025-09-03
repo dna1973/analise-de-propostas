@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferramenta AHP - Análise Multicritério de Propostas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Paleta de Cores: Tema Moderno com Azul Corporativo e Tons Neutros -->
+    <!-- Estrutura da Aplicação: Uma SPA orientada a tarefas. A estrutura segue o fluxo de trabalho do AHP: 1. Definir alternativas. 2. Definir e ordenar critérios com pesos, incluindo verificação de consistência. 3. Inserir dados brutos. 4. Ver pontuações normalizadas. 5. Ver resultados finais. 6. Gerar um relatório. -->
+    <!-- Visualização e Conteúdo: O relatório inclui critérios, resultados e uma análise por IA. Um elemento de UI exibe a Razão de Consistência (CR) com cores para indicar aprovação/reprovação, atualizando em tempo real. -->
+    <style>
+        :root {
+            /* Tema Claro */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --accent-primary: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --error: #dc2626;
+            --error-bg: #fef2f2;
+        }
+
+        .dark {
+            /* Tema Escuro */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #475569;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --success-bg: #064e3b;
+            --warning: #f59e0b;
+            --warning-bg: #451a03;
+            --error: #ef4444;
+            --error-bg: #7f1d1d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .matrix-cell,
+        .normalized-score-cell {
+            background-color: var(--bg-tertiary);
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .comparison-select,
+        .data-input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .comparison-select:focus,
+        .data-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .result-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: var(--bg-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .dark .result-card:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .criterion-type-toggle {
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 0 0.5rem;
+            border-radius: 50%;
+            color: var(--accent-primary);
+        }
+
+        .criterion-type-toggle:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        #report-modal,
+        #api-settings-modal {
+            display: none;
+        }
+
+        /* Melhorias para os ícones do header */
+        #theme-toggle-btn,
+        #api-settings-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        #theme-toggle-btn svg,
+        #api-settings-btn svg {
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        #theme-toggle-btn:hover svg,
+        #api-settings-btn:hover svg {
+            transform: scale(1.1);
+        }
+
+        #theme-toggle-btn:active svg,
+        #api-settings-btn:active svg {
+            transform: scale(0.95);
+        }
+
+        /* Melhorias para o display de consistência */
+        #consistency-check-display {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        #consistency-check-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .dark #consistency-check-display:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Tooltip para explicação da consistência */
+        .consistency-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #consistency-check-display:hover .consistency-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Correções específicas para o modal do relatório no tema escuro */
+        #report-content {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        #report-content * {
+            color: inherit !important;
+        }
+
+        #report-content table {
+            background-color: var(--bg-primary) !important;
+        }
+
+        #report-content th,
+        #report-content td {
+            background-color: inherit !important;
+            border-color: var(--border-color) !important;
+        }
+
+        #report-content .print-light-theme {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Estilo para texto da IA justificado em todas as visualizações */
+        #gemini-analysis-content {
+            text-align: justify !important;
+            line-height: 1.6 !important;
+        }
+
+        /* Garantir que apenas um ícone seja visível por vez */
+        .dark #theme-toggle-dark-icon {
+            display: block;
+        }
+
+        .dark #theme-toggle-light-icon {
+            display: none;
+        }
+
+        :not(.dark) #theme-toggle-dark-icon {
+            display: none;
+        }
+
+        :not(.dark) #theme-toggle-light-icon {
+            display: block;
+        }
+
+        .draggable-row {
+            cursor: grab;
+            background-color: var(--bg-primary);
+        }
+
+        .dragging {
+            opacity: 0.5;
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .drag-over {
+            border-top: 2px solid var(--accent-primary);
+        }
+
+        .loader {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Botões e Elementos Interativos */
+        .btn-primary {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        .card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .dark .card {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* Estilos de Impressão */
+        @media print {
+            .dark {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            html,
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            /* Esconder tudo exceto o conteúdo do relatório */
+            body * {
+                visibility: hidden;
+            }
+            
+            .print-light-theme,
+            .print-light-theme * {
+                visibility: visible;
+            }
+            
+            /* Estilos específicos para impressão das tabelas */
+            .print-light-theme * {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                border-color: #000000 !important;
+            }
+            
+            .print-light-theme table {
+                border-collapse: collapse !important;
+                width: 100% !important;
+                margin: 10px 0 !important;
+            }
+            
+            .print-light-theme th,
+            .print-light-theme td {
+                border: 1px solid #000000 !important;
+                padding: 8px !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                text-align: left !important;
+            }
+            
+            .print-light-theme th {
+                background-color: #f0f0f0 !important;
+                font-weight: bold !important;
+            }
+            
+            .print-light-theme .text-center {
+                text-align: center !important;
+            }
+            
+            .print-light-theme .font-bold {
+                font-weight: bold !important;
+            }
+            
+            /* Estilo para análise da IA justificada */
+            .print-light-theme #gemini-analysis-content {
+                text-align: justify !important;
+                line-height: 1.5 !important;
+                padding: 15px !important;
+                border: 1px solid #cccccc !important;
+                background-color: #f9f9f9 !important;
+                margin: 10px 0 !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="transition-colors duration-300">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl md:text-2xl font-bold" style="color: var(--text-primary);">Análise Multicritério (AHP)
+            </h1>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle-btn" class="rounded-lg text-sm p-2.5 transition-colors"
+                    style="color: var(--text-muted); background-color: transparent;"
+                    onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                    onmouseout="this.style.backgroundColor='transparent'" title="Alternar tema">
+                    <!-- Ícone da lua (tema escuro) -->
+                    <svg id="theme-toggle-dark-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z">
+                        </path>
+                    </svg>
+                    <!-- Ícone do sol (tema claro) -->
+                    <svg id="theme-toggle-light-icon" class="hidden w-6 h-6" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z">
+                        </path>
+                    </svg>
+                </button>
+                <button id="clear-data-btn" class="rounded-lg text-sm p-2.5 transition-colors"
+                    style="color: var(--text-muted); background-color: transparent;"
+                    onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                    onmouseout="this.style.backgroundColor='transparent'" title="Limpar dados salvos">
+                    <!-- Ícone de lixeira -->
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                        </path>
+                    </svg>
+                </button>
+                <button id="api-settings-btn" class="rounded-lg text-sm p-2.5 transition-colors"
+                    style="color: var(--text-muted); background-color: transparent;"
+                    onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                    onmouseout="this.style.backgroundColor='transparent'" title="Configurações da IA">
+                    <!-- Ícone da engrenagem -->
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <!-- Status dos Dados Salvos -->
+            <div id="save-status" class="mb-4 p-3 rounded-lg text-sm"
+                style="background-color: var(--success-bg); border: 1px solid var(--success); color: var(--success); display: none;">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span id="save-status-text">Dados carregados automaticamente</span>
+                </div>
+            </div>
+
+            <!-- Seção 0: Definição do Objeto da Análise -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">📋 Definição do Objeto da Análise</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <label for="analysis-object" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+                            Objeto das Propostas *
+                        </label>
+                        <input type="text" id="analysis-object" 
+                               placeholder="Ex: Sistema de Energia Solar, Software de Gestão, Serviços de Consultoria..."
+                               class="data-input p-3 rounded-md w-full text-left"
+                               style="border: 2px solid var(--border-color);">
+                        <p class="text-xs mt-1" style="color: var(--text-secondary);">
+                            Defina o que está sendo analisado para personalizar a análise
+                        </p>
+                    </div>
+                    <div>
+                        <label for="analysis-description" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+                            Descrição/Contexto (Opcional)
+                        </label>
+                        <textarea id="analysis-description" rows="3"
+                                  placeholder="Contexto adicional sobre a análise, requisitos específicos, etc..."
+                                  class="data-input p-3 rounded-md w-full text-left resize-none"
+                                  style="border: 2px solid var(--border-color);"></textarea>
+                        <p class="text-xs mt-1" style="color: var(--text-secondary);">
+                            Informações que ajudarão a IA a gerar análises mais precisas
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 p-4 rounded-lg" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color);">
+                    <h3 class="font-semibold mb-2" style="color: var(--text-primary);">💡 Exemplos de Objetos de Análise</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                            <p class="font-medium" style="color: var(--accent-primary);">🏢 Serviços/Sistemas</p>
+                            <p style="color: var(--text-secondary);">• Energia Solar</p>
+                            <p style="color: var(--text-secondary);">• Software ERP</p>
+                            <p style="color: var(--text-secondary);">• Consultoria</p>
+                        </div>
+                        <div>
+                            <p class="font-medium" style="color: var(--warning);">🛒 Produtos</p>
+                            <p style="color: var(--text-secondary);">• Equipamentos</p>
+                            <p style="color: var(--text-secondary);">• Veículos</p>
+                            <p style="color: var(--text-secondary);">• Materiais</p>
+                        </div>
+                        <div>
+                            <p class="font-medium" style="color: var(--success);">🏗️ Projetos</p>
+                            <p style="color: var(--text-secondary);">• Construção</p>
+                            <p style="color: var(--text-secondary);">• Reformas</p>
+                            <p style="color: var(--text-secondary);">• Desenvolvimento</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção 1: Empresas -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">1. Empresas/Fornecedores</h2>
+                <div id="company-inputs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <button id="add-company" class="btn-primary mt-4 font-bold py-2 px-4 rounded-md">+ Adicionar
+                    Empresa</button>
+            </section>
+
+            <!-- Seção 2: Critérios e Pesos -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">2. Definição de
+                    Pesos dos Critérios</h2>
+                <div class="mb-4 p-4 rounded-lg"
+                    style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color);">
+                    <h3 class="font-semibold mb-2" style="color: var(--text-primary);">💡 Guia de Importância dos
+                        Critérios</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p class="font-medium" style="color: var(--accent-primary);">🔴 Alta Importância (40%)</p>
+                            <p style="color: var(--text-secondary);">• Valor Total (25%) - Custo principal</p>
+                            <p style="color: var(--text-secondary);">• Payback (15%) - Retorno do investimento</p>
+                        </div>
+                        <div>
+                            <p class="font-medium" style="color: var(--warning);">🟡 Média Importância (35%)</p>
+                            <p style="color: var(--text-secondary);">• Geração Prevista (15%) - Performance</p>
+                            <p style="color: var(--text-secondary);">• Eficiência Painel (12%) - Qualidade</p>
+                            <p style="color: var(--text-secondary);">• Valor Estrutura (8%) - Custo adicional</p>
+                        </div>
+                        <div>
+                            <p class="font-medium" style="color: var(--success);">🟢 Garantias (20%)</p>
+                            <p style="color: var(--text-secondary);">• Garantia Painel (10%)</p>
+                            <p style="color: var(--text-secondary);">• Garantia Inversor (7%)</p>
+                            <p style="color: var(--text-secondary);">• Garantia Serviço (3%)</p>
+                        </div>
+                        <div>
+                            <p class="font-medium" style="color: var(--text-muted);">⚪ Menor Importância (5%)</p>
+                            <p style="color: var(--text-secondary);">• Quantidade Placas (5%)</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="mb-4" style="color: var(--text-secondary);">Arraste (⠿) para reordenar. Use ▼ para "menor é
+                    melhor" e ▲ para "maior é melhor". Ajuste as comparações abaixo para refinar os pesos.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse table-fixed">
+                        <thead id="matrix-head"></thead>
+                        <tbody id="matrix-body"></tbody>
+                    </table>
+                </div>
+                <div class="flex flex-wrap justify-between items-start mt-6">
+                    <div id="weights-display" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 flex-grow">
+                    </div>
+                    <div id="consistency-check-display"
+                        class="mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto"></div>
+                </div>
+                <div class="mt-6 pt-4" style="border-top: 1px solid var(--border-color);">
+                    <h3 class="text-lg font-semibold mb-3" style="color: var(--text-primary);">⚙️ Perfis de Decisão
+                        Pré-definidos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                        <button id="profile-conservative"
+                            class="p-3 rounded-lg border text-left transition-all hover:shadow-md"
+                            style="border-color: var(--border-color); background-color: var(--bg-primary);">
+                            <p class="font-semibold text-sm" style="color: var(--accent-primary);">💰 Conservador</p>
+                            <p class="text-xs" style="color: var(--text-secondary);">Foco em custo e payback</p>
+                        </button>
+                        <button id="profile-balanced"
+                            class="p-3 rounded-lg border text-left transition-all hover:shadow-md"
+                            style="border-color: var(--border-color); background-color: var(--bg-primary);">
+                            <p class="font-semibold text-sm" style="color: var(--warning);">⚖️ Equilibrado</p>
+                            <p class="text-xs" style="color: var(--text-secondary);">Balance custo-performance</p>
+                        </button>
+                        <button id="profile-performance"
+                            class="p-3 rounded-lg border text-left transition-all hover:shadow-md"
+                            style="border-color: var(--border-color); background-color: var(--bg-primary);">
+                            <p class="font-semibold text-sm" style="color: var(--success);">🚀 Performance</p>
+                            <p class="text-xs" style="color: var(--text-secondary);">Foco em eficiência e geração</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4" style="border-top: 1px solid var(--border-color);">
+                    <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">Adicionar Novo Critério
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="new-criterion-name" placeholder="Nome do novo critério"
+                            class="data-input p-2 rounded-md flex-grow">
+                        <button id="add-criterion-btn" class="btn-success font-bold py-2 px-4 rounded-md">Adicionar
+                            Critério</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção 3: Dados Brutos -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">3. Dados das
+                    Propostas</h2>
+                <p class="mb-4" style="color: var(--text-secondary);">Insira os valores REAIS de cada proposta.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead id="data-head"></thead>
+                        <tbody id="data-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Seção 4: Pontuações Normalizadas -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">4. Pontuações
+                    Normalizadas (1-5)</h2>
+                <p class="mb-4" style="color: var(--text-secondary);">Notas calculadas automaticamente com base nos
+                    dados inseridos.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead id="normalized-head"></thead>
+                        <tbody id="normalized-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Seção 5: Ranking Final -->
+            <section class="card p-6 rounded-lg mb-8">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">5. Ranking Final
+                </h2>
+                <div id="results-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- Seção 6: Relatório de Decisão -->
+            <section id="report-section" class="card p-6 rounded-lg mb-8" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4 pb-2"
+                    style="color: var(--text-primary); border-bottom: 1px solid var(--border-color);">📊 Relatório de Decisão</h2>
+                
+                <div id="report-content-main" class="space-y-6 mb-6"></div>
+
+                <div class="flex flex-wrap gap-3 justify-center pt-4" style="border-top: 1px solid var(--border-color);">
+                    <button id="generate-ai-analysis-btn" class="btn-primary font-bold py-3 px-6 rounded-lg">🤖 Gerar Análise por IA</button>
+                    <button id="export-pdf-btn" class="btn-secondary font-bold py-3 px-6 rounded-lg">📄 Exportar PDF</button>
+                    <button id="hide-report-btn" class="btn-secondary font-bold py-3 px-6 rounded-lg">❌ Ocultar Relatório</button>
+                </div>
+            </section>
+
+            <!-- Seção 7: Gerar Relatório -->
+            <section class="text-center">
+                <button id="show-report-btn" class="btn-primary font-bold py-3 px-6 rounded-lg">📊 Mostrar Relatório de Decisão</button>
+            </section>
+        </main>
+
+        <footer class="text-center p-4 mt-8 text-sm"
+            style="color: var(--text-muted); border-top: 1px solid var(--border-color);">
+            <p>Ferramenta de Análise Multicritério - Desenvolvido por Daniel Ávila (2025)</p>
+        </footer>
+    </div>
+
+    <!-- Modal de Configurações da API -->
+    <div id="api-settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="rounded-lg shadow-2xl max-w-md w-full p-6" style="background-color: var(--bg-primary);">
+            <h2 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Configurações da API Gemini</h2>
+            <p class="text-sm mb-4" style="color: var(--text-secondary);">Insira sua chave de API do Google Gemini para
+                habilitar a análise por IA no relatório.</p>
+            <div><label for="api-key-input" class="block mb-2 text-sm font-medium"
+                    style="color: var(--text-primary);">Chave de API</label><input type="password" id="api-key-input"
+                    class="data-input text-sm rounded-lg block w-full p-2.5"></div>
+            <div id="api-key-feedback" class="text-sm mt-2"></div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="save-api-key-btn" class="btn-primary font-bold py-2 px-4 rounded-md">Salvar</button>
+                <button id="close-api-modal-btn" class="btn-secondary font-bold py-2 px-4 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ESTADO INICIAL DA APLICAÇÃO ---
+            let criteria = [
+                { id: 'valor_total', name: 'Valor Total', weight: 0.25, type: 'cost', placeholder: 'R$' },
+                { id: 'payback', name: 'Payback', weight: 0.15, type: 'cost', placeholder: 'Anos' },
+                { id: 'geracao_prevista', name: 'Geração Prevista', weight: 0.15, type: 'benefit', placeholder: 'kWh/mês' },
+                { id: 'taxa_eficiencia_painel', name: 'Eficiência Painel', weight: 0.12, type: 'benefit', placeholder: '%' },
+                { id: 'valor_estrutura', name: 'Valor Estrutura', weight: 0.08, type: 'cost', placeholder: 'R$' },
+                { id: 'garantia_painel', name: 'Garantia Painel', weight: 0.10, type: 'benefit', placeholder: 'Anos' },
+                { id: 'garantia_inversor', name: 'Garantia Inversor', weight: 0.07, type: 'benefit', placeholder: 'Anos' },
+                { id: 'garantia_servico', name: 'Garantia Serviço', weight: 0.03, type: 'benefit', placeholder: 'Anos' },
+                { id: 'quantidade_placas', name: 'Quantidade Placas', weight: 0.05, type: 'benefit', placeholder: 'Unid.' },
+            ];
+            const ahpScale = [
+                { text: 'Extremamente mais importante', value: 9 }, { text: 'Muito mais importante', value: 7 }, { text: 'Mais importante', value: 5 }, { text: 'Levemente mais importante', value: 3 },
+                { text: 'Igualmente importante', value: 1 }, { text: 'Levemente menos importante', value: 1 / 3 }, { text: 'Menos importante', value: 1 / 5 }, { text: 'Muito menos importante', value: 1 / 7 },
+                { text: 'Extremamente menos importante', value: 1 / 9 },
+            ];
+            // Índices de Aleatoriedade corrigidos (Random Index - RI) - Valores mais precisos
+            const randomIndex = {
+                1: 0, 2: 0, 3: 0.52, 4: 0.89, 5: 1.11, 6: 1.25, 7: 1.35, 8: 1.40,
+                9: 1.45, 10: 1.49, 11: 1.51, 12: 1.54, 13: 1.56, 14: 1.57, 15: 1.59,
+                16: 1.605, 17: 1.61, 18: 1.615, 19: 1.62, 20: 1.625
+            };
+            let companies = ['Empresa 1', 'Empresa 2'];
+            let rawData = {};
+            let normalizedScores = {};
+            let finalResults = [];
+            let dragStartIndex;
+            let geminiApiKey = '';
+
+            // --- FUNÇÕES DE PERSISTÊNCIA DE DADOS ---
+            
+            // Função de debounce para otimizar salvamentos
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+            
+            // Versão com debounce do salvamento
+            const debouncedSave = debounce(saveProposalData, 500);
+            
+            function saveProposalData() {
+                const proposalData = {
+                    analysisObject: document.getElementById('analysis-object')?.value || '',
+                    analysisDescription: document.getElementById('analysis-description')?.value || '',
+                    companies: companies,
+                    criteria: criteria,
+                    rawData: rawData,
+                    normalizedScores: normalizedScores,
+                    finalResults: finalResults,
+                    geminiApiKey: geminiApiKey,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('ahp-proposals', JSON.stringify(proposalData));
+                console.log('Dados salvos automaticamente');
+
+                // Mostrar feedback visual discreto apenas para ações importantes
+                const isImportantAction = Object.keys(rawData).length > 0 || companies.length > 2;
+                if (isImportantAction) {
+                    showSaveStatus('Dados salvos ✓', 'success');
+                }
+            }
+
+            function showSaveStatus(message, type = 'success') {
+                const statusDiv = document.getElementById('save-status');
+                const statusText = document.getElementById('save-status-text');
+
+                // Configurar cores baseado no tipo
+                if (type === 'success') {
+                    statusDiv.style.backgroundColor = 'var(--success-bg)';
+                    statusDiv.style.borderColor = 'var(--success)';
+                    statusDiv.style.color = 'var(--success)';
+                } else if (type === 'error') {
+                    statusDiv.style.backgroundColor = 'var(--error-bg)';
+                    statusDiv.style.borderColor = 'var(--error)';
+                    statusDiv.style.color = 'var(--error)';
+                }
+
+                statusText.textContent = message;
+                statusDiv.style.display = 'block';
+                statusDiv.style.opacity = '1';
+
+                // Animação de fade out mais suave
+                setTimeout(() => {
+                    statusDiv.style.transition = 'opacity 0.5s ease';
+                    statusDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                        statusDiv.style.transition = '';
+                    }, 500);
+                }, 1500);
+            }
+
+            function loadProposalData() {
+                try {
+                    const saved = localStorage.getItem('ahp-proposals');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        
+                        // Carregar dados do objeto da análise
+                        if (data.analysisObject && document.getElementById('analysis-object')) {
+                            document.getElementById('analysis-object').value = data.analysisObject;
+                        }
+                        if (data.analysisDescription && document.getElementById('analysis-description')) {
+                            document.getElementById('analysis-description').value = data.analysisDescription;
+                        }
+                        
+                        companies = data.companies || companies;
+                        criteria = data.criteria || criteria;
+                        rawData = data.rawData || {};
+                        normalizedScores = data.normalizedScores || {};
+                        finalResults = data.finalResults || [];
+                        geminiApiKey = data.geminiApiKey || '';
+                        console.log('Dados carregados do armazenamento local');
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar dados:', error);
+                }
+                return false;
+            }
+
+            function clearSavedData() {
+                if (confirm('Tem certeza que deseja limpar todos os dados salvos? Esta ação não pode ser desfeita.')) {
+                    localStorage.removeItem('ahp-proposals');
+                    showSaveStatus('Dados limpos com sucesso! Recarregando...', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                }
+            }
+
+            // --- FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO ---
+            function renderAll() {
+                renderCompanyInputs();
+                renderMatrix();
+                renderDataTable();
+                normalizeAndDisplayScores();
+                calculateAndDisplayResults();
+                saveProposalData(); // Salva automaticamente após qualquer mudança
+            }
+
+            // Adicionar listeners para os novos campos
+            function addAnalysisObjectListeners() {
+                const analysisObjectInput = document.getElementById('analysis-object');
+                const analysisDescriptionInput = document.getElementById('analysis-description');
+                
+                if (analysisObjectInput) {
+                    analysisObjectInput.addEventListener('input', debouncedSave);
+                }
+                if (analysisDescriptionInput) {
+                    analysisDescriptionInput.addEventListener('input', debouncedSave);
+                }
+            }
+
+            // --- RENDERIZAÇÃO DAS SEÇÕES ---
+            function renderCompanyInputs() {
+                const container = document.getElementById('company-inputs');
+                container.innerHTML = '';
+                companies.forEach((name, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-2';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = name;
+                    input.className = 'company-name data-input p-2 rounded-md w-full';
+                    input.addEventListener('input', (e) => { companies[index] = e.target.value; debouncedSave(); });
+                    input.addEventListener('change', (e) => { companies[index] = e.target.value; renderAll(); });
+                    const button = document.createElement('button');
+                    button.innerHTML = '&times;';
+                    button.className = 'delete-company text-red-500 hover:text-red-700 font-bold text-2xl leading-none';
+                    button.title = 'Excluir Empresa';
+                    button.addEventListener('click', () => deleteCompany(index));
+                    div.appendChild(input);
+                    div.appendChild(button);
+                    container.appendChild(div);
+                });
+            }
+
+            function renderMatrix() {
+                const matrixHead = document.getElementById('matrix-head');
+                const matrixBody = document.getElementById('matrix-body');
+                const borderClass = 'border';
+                matrixHead.innerHTML = `<tr><th class="p-2 ${borderClass} w-10" style="border-color: var(--border-color); color: var(--text-primary);"></th><th class="p-2 ${borderClass} w-48" style="border-color: var(--border-color); color: var(--text-primary);">Critério</th>${criteria.map(c => `<th class="p-2 ${borderClass} text-xs font-medium" style="border-color: var(--border-color); color: var(--text-primary);">${c.name}</th>`).join('')}</tr>`;
+                matrixBody.innerHTML = '';
+                criteria.forEach((rowCriterion, i) => {
+                    const row = document.createElement('tr');
+                    row.className = 'draggable-row';
+                    row.setAttribute('draggable', 'true');
+                    row.dataset.index = i;
+                    let rowHTML = `<td class="p-2 ${borderClass} text-center" style="border-color: var(--border-color); color: var(--text-muted);" title="Arrastar para reordenar">⠿</td><td class="p-2 ${borderClass} font-semibold text-sm w-48" style="border-color: var(--border-color);"><div class="flex justify-between items-center gap-2"><span style="color: var(--text-primary);">${rowCriterion.name}</span><div><button class="criterion-type-toggle" data-index="${i}" title="${rowCriterion.type === 'benefit' ? 'Maior é Melhor' : 'Menor é Melhor'}">${rowCriterion.type === 'benefit' ? '▲' : '▼'}</button><button class="delete-criterion font-bold text-xl leading-none" data-index="${i}" title="Excluir Critério" style="color: var(--error);" onmouseover="this.style.color='#b91c1c'" onmouseout="this.style.color='var(--error)'">&times;</button></div></div></td>`;
+                    criteria.forEach((colCriterion, j) => {
+                        if (i === j) rowHTML += `<td class="p-1 ${borderClass}" style="border-color: var(--border-color);"><div class="matrix-cell">1</div></td>`;
+                        else if (i < j) {
+                            const ratio = rowCriterion.weight / colCriterion.weight;
+                            const closest = ahpScale.reduce((p, c) => (Math.abs(c.value - ratio) < Math.abs(p.value - ratio) ? c : p));
+                            rowHTML += `<td class="p-1 ${borderClass}" style="border-color: var(--border-color);"><select class="comparison-select" data-row="${i}" data-col="${j}">${ahpScale.map(s => `<option value="${s.value}" ${s.value === closest.value ? 'selected' : ''}>${s.text}</option>`).join('')}</select></td>`;
+                        } else {
+                            rowHTML += `<td class="p-1 ${borderClass}" style="border-color: var(--border-color);"><div id="inverse-${i}-${j}" class="matrix-cell"></div></td>`;
+                        }
+                    });
+                    row.innerHTML = rowHTML;
+                    matrixBody.appendChild(row);
+                });
+                addDragDropListeners();
+                document.querySelectorAll('.comparison-select').forEach(s => {
+                    s.addEventListener('change', () => { calculateWeights(); debouncedSave(); });
+                    s.addEventListener('input', () => { debouncedSave(); });
+                });
+                document.querySelectorAll('.delete-criterion').forEach(b => b.addEventListener('click', (e) => deleteCriterion(parseInt(e.currentTarget.dataset.index))));
+                document.querySelectorAll('.criterion-type-toggle').forEach(b => b.addEventListener('click', (e) => toggleCriterionType(parseInt(e.currentTarget.dataset.index))));
+                calculateWeights();
+            }
+
+            function renderDataTable() {
+                const dataHead = document.getElementById('data-head');
+                const dataBody = document.getElementById('data-body');
+                const borderClass = 'border';
+                dataHead.innerHTML = `<tr><th class="p-2 ${borderClass}" style="border-color: var(--border-color); color: var(--text-primary);">Critério</th>${companies.map(name => `<th class="p-2 ${borderClass} text-center" style="border-color: var(--border-color); color: var(--text-primary);">${name}</th>`).join('')}</tr>`;
+                dataBody.innerHTML = criteria.map(c => `<tr><td class="p-2 ${borderClass} font-semibold text-sm" style="border-color: var(--border-color); color: var(--text-primary);">${c.name}</td>${companies.map((_, companyIndex) => `<td class="p-1 ${borderClass}" style="border-color: var(--border-color);"><input type="number" step="any" min="0" id="data-${c.id}-${companyIndex}" class="data-input" value="${rawData[`data-${c.id}-${companyIndex}`] || ''}" placeholder="${c.placeholder || ''}"></td>`).join('')}</tr>`).join('');
+                document.querySelectorAll('.data-input').forEach(input => {
+                    input.addEventListener('input', (e) => { 
+                        rawData[e.target.id] = e.target.value; 
+                        normalizeAndDisplayScores(); 
+                        calculateAndDisplayResults();
+                        debouncedSave(); // Usar salvamento com debounce para melhor performance
+                    });
+                });
+            }
+
+            function normalizeAndDisplayScores() {
+                normalizedScores = {};
+                const normalizedBody = document.getElementById('normalized-body');
+                const normalizedHead = document.getElementById('normalized-head');
+                const borderClass = 'border';
+                normalizedHead.innerHTML = `<tr><th class="p-2 ${borderClass}" style="border-color: var(--border-color); color: var(--text-primary);">Critério</th>${companies.map(name => `<th class="p-2 ${borderClass} text-center" style="border-color: var(--border-color); color: var(--text-primary);">${name}</th>`).join('')}</tr>`;
+                let tableHTML = '';
+                criteria.forEach(c => {
+                    let values = companies.map((_, i) => parseFloat(rawData[`data-${c.id}-${i}`])).filter(v => !isNaN(v));
+                    if (values.length === 0) {
+                        companies.forEach((_, i) => normalizedScores[`score-${c.id}-${i}`] = 1);
+                    } else {
+                        if (c.type === 'benefit') {
+                            const max = Math.max(...values.map(v => isNaN(v) ? -Infinity : v));
+                            companies.forEach((_, i) => { const val = parseFloat(rawData[`data-${c.id}-${i}`]); normalizedScores[`score-${c.id}-${i}`] = (isNaN(val) || max === 0) ? 1 : (val / max) * 4 + 1; });
+                        } else { // cost
+                            const min = Math.min(...values.map(v => isNaN(v) || v === 0 ? Infinity : v));
+                            companies.forEach((_, i) => { const val = parseFloat(rawData[`data-${c.id}-${i}`]); normalizedScores[`score-${c.id}-${i}`] = (isNaN(val) || val === 0) ? 1 : (min / val) * 4 + 1; });
+                        }
+                    }
+                    tableHTML += `<tr><td class="p-2 ${borderClass} font-semibold text-sm" style="border-color: var(--border-color); color: var(--text-primary);">${c.name}</td>${companies.map((_, i) => `<td class="p-1 ${borderClass} text-center" style="border-color: var(--border-color);"><div class="normalized-score-cell">${(normalizedScores[`score-${c.id}-${i}`] || 1).toFixed(2)}</div></td>`).join('')}</tr>`;
+                });
+                normalizedBody.innerHTML = tableHTML;
+            }
+
+            function calculateAndDisplayResults() {
+                const container = document.getElementById('results-container');
+                container.innerHTML = '';
+                if (criteria.length === 0 || companies.length === 0) return;
+                let companyScores = Array(companies.length).fill(0);
+                companies.forEach((_, i) => { criteria.forEach(c => { companyScores[i] += (parseFloat(normalizedScores[`score-${c.id}-${i}`] || 0) * c.weight); }); });
+                finalResults = companies.map((name, index) => ({ name, score: companyScores[index] })).sort((a, b) => b.score - a.score);
+                finalResults.forEach((company, index) => {
+                    const rank = index + 1;
+                    const card = document.createElement('div');
+                    card.className = 'result-card p-4 rounded-lg';
+
+                    // Aplicar cores baseadas na posição
+                    if (rank === 1) {
+                        card.style.backgroundColor = 'var(--success-bg)';
+                        card.style.borderColor = 'var(--success)';
+                    } else if (rank === 2) {
+                        card.style.backgroundColor = 'var(--warning-bg)';
+                        card.style.borderColor = 'var(--warning)';
+                    } else if (rank === 3) {
+                        card.style.backgroundColor = 'var(--error-bg)';
+                        card.style.borderColor = 'var(--error)';
+                    }
+
+                    card.innerHTML = `<div class="flex items-baseline justify-between"><h3 class="text-xl font-bold" style="color: var(--text-primary);">${company.name}</h3><span class="text-2xl font-black" style="color: var(--text-secondary);">#${rank}</span></div><p class="text-3xl font-bold text-center my-4" style="color: var(--accent-primary);">${(company.score * 20).toFixed(2)} / 100</p><p class="text-xs text-center" style="color: var(--text-muted);">Pontuação Final: ${company.score.toFixed(4)}</p>`;
+                    container.appendChild(card);
+                });
+            }
+
+            // --- LÓGICA DE CÁLCULO AHP ---
+            function calculateWeights() {
+                const n = criteria.length;
+                if (n === 0) {
+                    displayWeights();
+                    displayConsistencyCheck(0, 0, true, 'N/A - Sem critérios');
+                    calculateAndDisplayResults();
+                    return;
+                }
+                if (n === 1) {
+                    criteria[0].weight = 1.0;
+                    displayWeights();
+                    displayConsistencyCheck(0, 0, true, 'N/A - Único critério');
+                    calculateAndDisplayResults();
+                    return;
+                }
+                let matrix = Array(n).fill(0).map(() => Array(n).fill(0));
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        if (i === j) matrix[i][j] = 1;
+                        else if (i < j) {
+                            const select = document.querySelector(`[data-row='${i}'][data-col='${j}']`);
+                            if (select) {
+                                const val = parseFloat(select.value);
+                                matrix[i][j] = val;
+                                matrix[j][i] = 1 / val;
+                                const inverseCell = document.getElementById(`inverse-${j}-${i}`);
+                                if (inverseCell) inverseCell.textContent = (1 / val).toFixed(2);
+                            }
+                        }
+                    }
+                }
+                let columnSums = Array(n).fill(0);
+                for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) columnSums[j] += matrix[i][j];
+                let normalizedMatrix = Array(n).fill(0).map(() => Array(n).fill(0));
+                for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) normalizedMatrix[i][j] = matrix[i][j] / columnSums[j];
+                for (let i = 0; i < n; i++) criteria[i].weight = normalizedMatrix[i].reduce((a, b) => a + b, 0) / n;
+
+                displayWeights();
+                calculateAndDisplayConsistency(matrix, criteria.map(c => c.weight), n);
+                calculateAndDisplayResults();
+            }
+
+            function calculateAndDisplayConsistency(matrix, weights, n) {
+                if (n <= 2) {
+                    displayConsistencyCheck(0, 0, true, 'N/A (≤ 2 critérios)');
+                    return;
+                }
+
+                // Calcular λmax (maior autovalor) - Método mais preciso
+                let lambdaMax = 0;
+                for (let i = 0; i < n; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < n; j++) {
+                        sum += matrix[i][j] * weights[j];
+                    }
+                    if (weights[i] !== 0) {
+                        lambdaMax += sum / weights[i];
+                    }
+                }
+                lambdaMax = lambdaMax / n;
+
+                // Calcular CI (Índice de Consistência)
+                const CI = (lambdaMax - n) / (n - 1);
+
+                // Obter RI (Índice Aleatório) corrigido
+                const RI = randomIndex[n] || randomIndex[20]; // Fallback para n > 20
+
+                // Calcular CR (Razão de Consistência)
+                const CR = RI === 0 ? 0 : CI / RI;
+
+                const isConsistent = CR <= 0.10; // Limiar padrão de 10%
+
+                displayConsistencyCheck(CI, CR, isConsistent, null, lambdaMax);
+            }
+
+            function displayConsistencyCheck(CI, CR, isConsistent, customMessage = null, lambdaMax = null) {
+                const container = document.getElementById('consistency-check-display');
+
+                if (customMessage) {
+                    container.innerHTML = `
+                        <p class="font-semibold text-sm" style="color: var(--text-primary);">Verificação de Consistência</p>
+                        <p class="text-lg font-bold" style="color: var(--text-secondary);">${customMessage}</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Análise não aplicável</p>
+                    `;
+                    container.className = 'mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto';
+                    container.style.backgroundColor = 'var(--bg-tertiary)';
+                    container.style.borderColor = 'var(--border-color)';
+                    container.style.border = '1px solid';
+                    return;
+                }
+
+                const crPercentage = (CR * 100).toFixed(1);
+                const statusText = isConsistent ? 'Consistente' : 'Inconsistente';
+                const detailText = isConsistent ?
+                    'Julgamentos aceitos' :
+                    'Revisar comparações';
+
+                const statusIcon = isConsistent ? '✓' : '⚠';
+                const threshold = '≤ 10%';
+
+                container.innerHTML = `
+                    <div class="consistency-tooltip" style="color: var(--text-primary); background-color: var(--bg-primary);">
+                        CR mede a consistência dos julgamentos. ≤10% é aceitável.
+                    </div>
+                    <p class="font-semibold text-sm" style="color: var(--text-primary);">Razão de Consistência</p>
+                    <p class="text-2xl font-bold flex items-center justify-center gap-1" style="color: ${isConsistent ? 'var(--success)' : 'var(--error)'};">
+                        <span>${statusIcon}</span>
+                        <span>${crPercentage}%</span>
+                    </p>
+                    <p class="text-xs font-medium" style="color: ${isConsistent ? 'var(--success)' : 'var(--error)'};">${statusText}</p>
+                    <p class="text-xs" style="color: var(--text-muted);">${detailText}</p>
+                    <p class="text-xs mt-1" style="color: var(--text-muted);">Limite: ${threshold} | CI: ${CI.toFixed(4)}</p>
+                    ${lambdaMax ? `<p class="text-xs" style="color: var(--text-muted);">λmax: ${lambdaMax.toFixed(3)}</p>` : ''}
+                `;
+
+                container.className = 'mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto border';
+                container.style.backgroundColor = isConsistent ? 'var(--success-bg)' : 'var(--error-bg)';
+                container.style.borderColor = isConsistent ? 'var(--success)' : 'var(--error)';
+            }
+
+            function displayWeights() {
+                const container = document.getElementById('weights-display');
+                container.innerHTML = criteria.map(c => `<div class="p-3 rounded-lg text-center" style="background-color: var(--bg-tertiary);"><p class="font-semibold text-sm" style="color: var(--text-primary);">${c.name}</p><p class="text-xl font-bold" style="color: var(--accent-primary);">${(c.weight * 100).toFixed(1)}%</p></div>`).join('');
+            }
+
+            // --- MANIPULAÇÃO DE DADOS (ADICIONAR/REMOVER) ---
+            function addCriterion() {
+                const nameInput = document.getElementById('new-criterion-name');
+                const name = nameInput.value.trim();
+                if (name) {
+                    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+                    criteria.push({ id, name, weight: 1 / (criteria.length + 1), type: 'benefit', placeholder: 'Valor' });
+                    nameInput.value = '';
+                    renderAll();
+                }
+            }
+
+            function deleteCriterion(index) {
+                if (criteria.length <= 2) { return; }
+                const idToDelete = criteria[index].id;
+                Object.keys(rawData).forEach(key => { if (key.startsWith(`data-${idToDelete}-`)) delete rawData[key]; });
+                criteria.splice(index, 1);
+                renderAll();
+            }
+
+            function toggleCriterionType(index) {
+                criteria[index].type = criteria[index].type === 'benefit' ? 'cost' : 'benefit';
+                renderAll();
+            }
+
+            function deleteCompany(index) {
+                if (companies.length <= 1) { return; }
+                const newRawData = {};
+                Object.keys(rawData).forEach(key => {
+                    const parts = key.split('-');
+                    const criterionId = parts[1];
+                    const companyIndex = parseInt(parts[2]);
+                    if (companyIndex < index) newRawData[key] = rawData[key];
+                    else if (companyIndex > index) newRawData[`data-${criterionId}-${companyIndex - 1}`] = rawData[key];
+                });
+                rawData = newRawData;
+                companies.splice(index, 1);
+                renderAll();
+            }
+
+            // --- DRAG & DROP ---
+            function addDragDropListeners() {
+                const rows = document.querySelectorAll('#matrix-body tr');
+                rows.forEach(row => {
+                    row.addEventListener('dragstart', (e) => { dragStartIndex = parseInt(e.currentTarget.dataset.index); e.currentTarget.classList.add('dragging'); });
+                    row.addEventListener('dragenter', (e) => e.currentTarget.classList.add('drag-over'));
+                    row.addEventListener('dragover', (e) => e.preventDefault());
+                    row.addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
+                    row.addEventListener('drop', (e) => {
+                        const dropIndex = parseInt(e.currentTarget.dataset.index);
+                        const draggedItem = criteria.splice(dragStartIndex, 1)[0];
+                        criteria.splice(dropIndex, 0, draggedItem);
+                        e.currentTarget.classList.remove('drag-over');
+                        renderAll();
+                    });
+                    row.addEventListener('dragend', (e) => e.currentTarget.classList.remove('dragging'));
+                });
+            }
+
+            // --- RELATÓRIO E IA GEMINI ---
+            function createStructuredReportData() {
+                // Organizar dados por empresa de forma estruturada
+                const companiesData = companies.map((companyName, companyIndex) => {
+                    const companyData = {
+                        nome: companyName,
+                        dados_brutos: {},
+                        pontuacoes_normalizadas: {},
+                        pontuacao_final: 0
+                    };
+                    
+                    // Coletar dados brutos e normalizados por critério
+                    criteria.forEach(criterion => {
+                        const rawValue = rawData[`data-${criterion.id}-${companyIndex}`] || 'Não informado';
+                        const normalizedValue = normalizedScores[`score-${criterion.id}-${companyIndex}`] || 1;
+                        
+                        companyData.dados_brutos[criterion.name] = rawValue;
+                        companyData.pontuacoes_normalizadas[criterion.name] = normalizedValue.toFixed(2);
+                    });
+                    
+                    // Encontrar pontuação final
+                    const result = finalResults.find(r => r.name === companyName);
+                    if (result) {
+                        companyData.pontuacao_final = (result.score * 20).toFixed(2);
+                        companyData.posicao = finalResults.indexOf(result) + 1;
+                    }
+                    
+                    return companyData;
+                });
+                
+                // Organizar critérios com pesos
+                const criteriosComPesos = criteria.map(c => ({
+                    nome: c.name,
+                    peso: (c.weight * 100).toFixed(2) + '%',
+                    tipo: c.type === 'benefit' ? 'Maior é Melhor' : 'Menor é Melhor'
+                }));
+                
+                return {
+                    empresas: companiesData,
+                    criterios: criteriosComPesos,
+                    empresa_vencedora: finalResults.length > 0 ? finalResults[0].name : 'N/A',
+                    total_empresas: companies.length
+                };
+            }
+
+            async function getGeminiAnalysis(structuredData) {
+                const apiKey = geminiApiKey;
+                if (!apiKey) return "<strong>Erro:</strong> Chave de API do Gemini não configurada. Por favor, adicione a chave nas configurações (ícone de engrenagem).";
+
+                // Obter dados do objeto da análise
+                const analysisObject = document.getElementById('analysis-object').value.trim() || 'propostas de fornecedores';
+                const analysisDescription = document.getElementById('analysis-description').value.trim();
+                
+                const contextInfo = analysisDescription ? 
+                    `\n**Contexto Adicional:** ${analysisDescription}` : '';
+
+                const prompt = `Você é um Analista de Compras experiente, especialista em avaliar propostas de diferentes fornecedores para garantir a melhor contratação em termos de custo, qualidade e risco.
+
+Analise os seguintes dados estruturados de uma comparação de propostas para a contratação de ${analysisObject}, gerados por um método de análise comparativa (AHP). A pontuação final vai de 0 a 100.${contextInfo}
+
+**EMPRESA VENCEDORA:** ${structuredData.empresa_vencedora}
+
+**CRITÉRIOS E PESOS UTILIZADOS:**
+${structuredData.criterios.map(c => `• ${c.nome}: ${c.peso} (${c.tipo})`).join('\n')}
+
+**DADOS DETALHADOS POR EMPRESA:**
+${structuredData.empresas.map(empresa => {
+    return `\n**${empresa.nome}** (${empresa.posicao}º lugar - ${empresa.pontuacao_final}/100 pontos):
+` +
+    `Dados da Proposta:\n${Object.entries(empresa.dados_brutos).map(([criterio, valor]) => `  • ${criterio}: ${valor}`).join('\n')}\n` +
+    `Pontuações Normalizadas (1-5):\n${Object.entries(empresa.pontuacoes_normalizadas).map(([criterio, pontuacao]) => `  • ${criterio}: ${pontuacao}`).join('\n')}`;
+}).join('\n')}
+
+**Sua Tarefa:**
+Com base nos dados estruturados acima, escreva uma análise qualitativa e concisa para a diretoria da organização. A análise deve ser clara, direta e servir como fundamento para a decisão final. O relatório deve conter:
+
+1.  **Resumo Executivo:** Uma breve introdução explicando o objetivo da análise, a metodologia usada (critérios e pesos) e qual fornecedor obteve a melhor pontuação geral.
+
+2.  **Análise Comparativa:** Compare os dados brutos das empresas nos critérios mais importantes (maior peso), destacando onde a empresa vencedora se destacou.
+
+3.  **Pontos Fortes da Proposta Vencedora:** Identifique especificamente os critérios onde o fornecedor vencedor (${structuredData.empresa_vencedora}) mais se destacou em relação aos outros concorrentes. Se houver algum ponto fraco ou risco na proposta vencedora que precise ser mitigado, mencione aqui.
+
+4.  **Recomendação Final:** Com base na análise quantitativa e qualitativa, forneça uma recomendação formal e justificada para a contratação do fornecedor vencedor.
+
+Formate a resposta usando títulos com **negrito** e parágrafos simples. Seja específico ao mencionar valores e dados das propostas.`;
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        console.error('API Error:', error);
+                        return `<strong>Erro na API:</strong> ${error.error.message}`;
+                    }
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0) {
+                        return result.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                    }
+                    return '<strong>Erro:</strong> Resposta inválida da API.';
+                } catch (error) {
+                    console.error('Fetch Error:', error);
+                    return `<strong>Erro de Conexão:</strong> Não foi possível contatar a API do Gemini. Verifique sua conexão ou a chave de API.`;
+                }
+            }
+
+            function generateReportHTML(geminiAnalysis = '') {
+                const winner = finalResults.length > 0 ? finalResults[0].name : 'N/A';
+                
+                // Usar cores dinâmicas para visualização na tela, fixas para impressão
+                const tableStyle = 'border: 1px solid var(--border-color); color: var(--text-primary);';
+                const headerStyle = 'background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);';
+                const winnerStyle = 'background-color: var(--success-bg);';
+                
+                const criteriaTable = criteria.map(c => `<tr><td class="p-2 text-center" style="${tableStyle}">${c.name}</td><td class="p-2 text-center" style="${tableStyle}">${c.type === 'benefit' ? 'Maior é Melhor (▲)' : 'Menor é Melhor (▼)'}</td><td class="p-2 text-center font-bold" style="${tableStyle}">${(c.weight * 100).toFixed(2)}%</td></tr>`).join('');
+                const rawDataTable = criteria.map(c => `<tr><td class="p-2" style="${tableStyle}">${c.name}</td>${companies.map((_, i) => `<td class="p-2 text-center" style="${tableStyle}">${rawData[`data-${c.id}-${i}`] || '-'}</td>`).join('')}</tr>`).join('');
+                const normalizedTable = criteria.map(c => `<tr><td class="p-2" style="${tableStyle}">${c.name}</td>${companies.map((_, i) => `<td class="p-2 text-center" style="${tableStyle}">${(normalizedScores[`score-${c.id}-${i}`] || 1).toFixed(2)}</td>`).join('')}</tr>`).join('');
+                const resultsTable = finalResults.map((r, i) => `<tr style="${i === 0 ? winnerStyle : ''}"><td class="p-2 text-center font-bold" style="${tableStyle}">${i + 1}º</td><td class="p-2" style="${tableStyle}">${r.name}</td><td class="p-2 text-center font-bold" style="${tableStyle}">${(r.score * 20).toFixed(2)} / 100</td></tr>`).join('');
+
+                return `
+                    <div class="space-y-6" style="color: var(--text-primary);">
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold" style="color: var(--text-primary);">Relatório de Tomada de Decisão</h2>
+                            <p class="text-sm" style="color: var(--text-secondary);">Análise Comparativa de Propostas</p>
+                        </div>
+                        <div class="p-4 rounded-lg" style="background-color: var(--success-bg); border: 1px solid var(--success); color: var(--text-primary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Resumo da Decisão</h3>
+                            <p style="color: var(--text-primary);">Com base nos critérios e pesos definidos, a proposta da empresa <strong>${winner}</strong> foi classificada como a mais vantajosa.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">1. Critérios e Pesos Finais</h3>
+                            <table class="w-full border-collapse text-sm" style="color: var(--text-primary);">
+                                <thead><tr style="${headerStyle}">
+                                    <th class="p-2" style="${tableStyle}">Critério</th>
+                                    <th class="p-2" style="${tableStyle}">Tipo</th>
+                                    <th class="p-2" style="${tableStyle}">Peso Final</th>
+                                </tr></thead>
+                                <tbody>${criteriaTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">2. Dados das Propostas (Valores Brutos)</h3>
+                            <table class="w-full border-collapse text-sm" style="color: var(--text-primary);">
+                                <thead><tr style="${headerStyle}">
+                                    <th class="p-2" style="${tableStyle}">Critério</th>
+                                    ${companies.map(name => `<th class="p-2" style="${tableStyle}">${name}</th>`).join('')}
+                                </tr></thead>
+                                <tbody>${rawDataTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">3. Pontuações Normalizadas (1-5)</h3>
+                            <table class="w-full border-collapse text-sm" style="color: var(--text-primary);">
+                                <thead><tr style="${headerStyle}">
+                                    <th class="p-2" style="${tableStyle}">Critério</th>
+                                    ${companies.map(name => `<th class="p-2" style="${tableStyle}">${name}</th>`).join('')}
+                                </tr></thead>
+                                <tbody>${normalizedTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">4. Resultado Final</h3>
+                            <table class="w-full border-collapse text-sm" style="color: var(--text-primary);">
+                                <thead><tr style="${headerStyle}">
+                                    <th class="p-2" style="${tableStyle}">Rank</th>
+                                    <th class="p-2" style="${tableStyle}">Empresa</th>
+                                    <th class="p-2" style="${tableStyle}">Pontuação Final</th>
+                                </tr></thead>
+                                <tbody>${resultsTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">5. Análise da IA (Gemini)</h3>
+                            <div id="gemini-analysis-content" class="p-4 rounded-lg text-sm min-h-[80px]" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); text-align: justify; line-height: 1.6;">${geminiAnalysis}</div>
+                        </div>
+                        <div class="text-center pt-6 mt-6 text-xs" style="border-top: 1px solid var(--border-color); color: var(--text-muted);">
+                            <p>Ferramenta de Análise Multicritério - Desenvolvido por Daniel Ávila (2025)</p>
+                        </div>
+                    </div>`;
+            }
+
+            // Função separada para gerar HTML para PDF com cores fixas
+            function generatePDFReportHTML(geminiAnalysis = '') {
+                const winner = finalResults.length > 0 ? finalResults[0].name : 'N/A';
+                const criteriaTable = criteria.map(c => `<tr><td class="p-2 text-center" style="border: 1px solid #000000; color: #000000;">${c.name}</td><td class="p-2 text-center" style="border: 1px solid #000000; color: #000000;">${c.type === 'benefit' ? 'Maior é Melhor (▲)' : 'Menor é Melhor (▼)'}</td><td class="p-2 text-center font-bold" style="border: 1px solid #000000; color: #000000;">${(c.weight * 100).toFixed(2)}%</td></tr>`).join('');
+                const rawDataTable = criteria.map(c => `<tr><td class="p-2" style="border: 1px solid #000000; color: #000000;">${c.name}</td>${companies.map((_, i) => `<td class="p-2 text-center" style="border: 1px solid #000000; color: #000000;">${rawData[`data-${c.id}-${i}`] || '-'}</td>`).join('')}</tr>`).join('');
+                const normalizedTable = criteria.map(c => `<tr><td class="p-2" style="border: 1px solid #000000; color: #000000;">${c.name}</td>${companies.map((_, i) => `<td class="p-2 text-center" style="border: 1px solid #000000; color: #000000;">${(normalizedScores[`score-${c.id}-${i}`] || 1).toFixed(2)}</td>`).join('')}</tr>`).join('');
+                const resultsTable = finalResults.map((r, i) => `<tr style="${i === 0 ? 'background-color: #e0f2e0;' : ''}"><td class="p-2 text-center font-bold" style="border: 1px solid #000000; color: #000000;">${i + 1}º</td><td class="p-2" style="border: 1px solid #000000; color: #000000;">${r.name}</td><td class="p-2 text-center font-bold" style="border: 1px solid #000000; color: #000000;">${(r.score * 20).toFixed(2)} / 100</td></tr>`).join('');
+
+                return `
+                    <div class="space-y-6 print-light-theme" style="color: #000000;">
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold" style="color: #000000;">Relatório de Tomada de Decisão</h2>
+                            <p class="text-sm" style="color: #666666;">Análise Comparativa de Propostas</p>
+                        </div>
+                        <div class="p-4 rounded-lg" style="background-color: #e0f2e0; border: 1px solid #00aa00; color: #000000;">
+                            <h3 class="text-lg font-semibold" style="color: #000000;">Resumo da Decisão</h3>
+                            <p style="color: #000000;">Com base nos critérios e pesos definidos, a proposta da empresa <strong>${winner}</strong> foi classificada como a mais vantajosa.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: #000000;">1. Critérios e Pesos Finais</h3>
+                            <table class="w-full border-collapse text-sm" style="color: #000000; border: 1px solid #000000;">
+                                <thead><tr style="background-color: #f0f0f0;">
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Critério</th>
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Tipo</th>
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Peso Final</th>
+                                </tr></thead>
+                                <tbody>${criteriaTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: #000000;">2. Dados das Propostas (Valores Brutos)</h3>
+                            <table class="w-full border-collapse text-sm" style="color: #000000; border: 1px solid #000000;">
+                                <thead><tr style="background-color: #f0f0f0;">
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Critério</th>
+                                    ${companies.map(name => `<th class="p-2" style="border: 1px solid #000000; color: #000000;">${name}</th>`).join('')}
+                                </tr></thead>
+                                <tbody>${rawDataTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: #000000;">3. Pontuações Normalizadas (1-5)</h3>
+                            <table class="w-full border-collapse text-sm" style="color: #000000; border: 1px solid #000000;">
+                                <thead><tr style="background-color: #f0f0f0;">
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Critério</th>
+                                    ${companies.map(name => `<th class="p-2" style="border: 1px solid #000000; color: #000000;">${name}</th>`).join('')}
+                                </tr></thead>
+                                <tbody>${normalizedTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: #000000;">4. Resultado Final</h3>
+                            <table class="w-full border-collapse text-sm" style="color: #000000; border: 1px solid #000000;">
+                                <thead><tr style="background-color: #f0f0f0;">
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Rank</th>
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Empresa</th>
+                                    <th class="p-2" style="border: 1px solid #000000; color: #000000;">Pontuação Final</th>
+                                </tr></thead>
+                                <tbody>${resultsTable}</tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2" style="color: #000000;">5. Análise da IA (Gemini)</h3>
+                            <div id="gemini-analysis-content-pdf" class="p-4 rounded-lg text-sm min-h-[80px]" style="background-color: #f9f9f9; border: 1px solid #cccccc; color: #000000; text-align: justify; line-height: 1.6;">${geminiAnalysis}</div>
+                        </div>
+                        <div class="text-center pt-6 mt-6 text-xs" style="border-top: 1px solid #cccccc; color: #666666;">
+                            <p>Ferramenta de Análise Multicritério - Desenvolvido por Daniel Ávila (2025)</p>
+                        </div>
+                    </div>`;
+            }
+
+            // --- EVENT LISTENERS GERAIS ---
+            
+            // Função para mostrar o relatório na tela
+            function showReport() {
+                // Verificar se há dados suficientes
+                if (finalResults.length === 0 || criteria.length === 0) {
+                    alert('Por favor, preencha os dados das empresas e critérios antes de gerar o relatório.');
+                    return;
+                }
+                
+                const reportSection = document.getElementById('report-section');
+                const reportContent = document.getElementById('report-content-main');
+                
+                // Gerar relatório sem análise da IA inicialmente
+                reportContent.innerHTML = generateReportHTML('<p style="color: var(--text-muted); font-style: italic;">Clique em "Gerar Análise por IA" para obter insights detalhados sobre os resultados.</p>');
+                
+                // Mostrar a seção
+                reportSection.style.display = 'block';
+                
+                // Scroll suave para o relatório
+                reportSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // Habilitar botão de exportar PDF
+                document.getElementById('export-pdf-btn').disabled = false;
+            }
+            
+            // Função para ocultar o relatório
+            function hideReport() {
+                document.getElementById('report-section').style.display = 'none';
+            }
+            
+            // Função para gerar análise da IA
+            async function generateAIAnalysis() {
+                const analysisBtn = document.getElementById('generate-ai-analysis-btn');
+                const originalText = analysisBtn.innerHTML;
+                
+                // Mostrar loading
+                analysisBtn.innerHTML = '🔄 Gerando Análise...';
+                analysisBtn.disabled = true;
+                
+                try {
+                    const structuredData = createStructuredReportData();
+                    const analysis = await getGeminiAnalysis(structuredData);
+                    
+                    // Atualizar conteúdo do relatório com a análise
+                    const reportContent = document.getElementById('report-content-main');
+                    reportContent.innerHTML = generateReportHTML(analysis);
+                    
+                    // Feedback de sucesso
+                    analysisBtn.innerHTML = '✅ Análise Gerada!';
+                    setTimeout(() => {
+                        analysisBtn.innerHTML = originalText;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Erro ao gerar análise:', error);
+                    analysisBtn.innerHTML = '❌ Erro na Análise';
+                    setTimeout(() => {
+                        analysisBtn.innerHTML = originalText;
+                    }, 3000);
+                } finally {
+                    analysisBtn.disabled = false;
+                }
+            }
+            
+            // Função para exportar PDF
+            function exportToPDF() {
+                // Verificar se o relatório está visível
+                const reportSection = document.getElementById('report-section');
+                if (reportSection.style.display === 'none') {
+                    alert('Por favor, gere o relatório primeiro clicando em "Mostrar Relatório".');
+                    return;
+                }
+                
+                const exportBtn = document.getElementById('export-pdf-btn');
+                const originalText = exportBtn.innerHTML;
+                
+                // Mostrar loading
+                exportBtn.innerHTML = '🔄 Preparando PDF...';
+                exportBtn.disabled = true;
+                
+                try {
+                    // Obter análise atual do relatório principal
+                    const analysisElement = document.getElementById('gemini-analysis-content');
+                    let currentAnalysis = '<p style="color: #666666; font-style: italic;">Análise não gerada. Para obter insights detalhados, use o botão "Gerar Análise por IA".</p>';
+                    
+                    if (analysisElement && analysisElement.innerHTML.trim()) {
+                        // Verificar se não é a mensagem padrão
+                        const content = analysisElement.innerHTML.trim();
+                        if (!content.includes('Clique em') && !content.includes('não gerada')) {
+                            currentAnalysis = content;
+                        }
+                    }
+                    
+                    // Criar uma nova janela para impressão
+                    const printWindow = window.open('', '_blank');
+                    
+                    if (!printWindow) {
+                        alert('Pop-up bloqueado! Por favor, permita pop-ups para este site e tente novamente.');
+                        return;
+                    }
+                    
+                    const htmlContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Relatório de Tomada de Decisão</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; color: #000000; line-height: 1.4; }
+                            table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+                            th, td { border: 1px solid #000000; padding: 8px; text-align: left; }
+                            th { background-color: #f0f0f0; font-weight: bold; }
+                            .text-center { text-align: center; }
+                            .font-bold { font-weight: bold; }
+                            .winner-row { background-color: #e0f2e0; }
+                            .summary-box { 
+                                background-color: #e0f2e0; 
+                                border: 1px solid #00aa00; 
+                                padding: 15px; 
+                                margin: 15px 0; 
+                                border-radius: 5px;
+                            }
+                            .analysis-box { 
+                                text-align: justify; 
+                                line-height: 1.6; 
+                                padding: 15px; 
+                                border: 1px solid #cccccc; 
+                                background-color: #f9f9f9; 
+                                margin: 15px 0; 
+                                border-radius: 5px;
+                            }
+                            h1, h2, h3 { color: #000000; margin-top: 20px; }
+                            .space-y-6 > * + * { margin-top: 20px; }
+                        </style>
+                    </head>
+                    <body>
+                        ${generatePDFReportHTML(currentAnalysis)}
+                    </body>
+                    </html>`;
+                    
+                    printWindow.document.write(htmlContent);
+                    printWindow.document.close();
+                    
+                    // Aguardar carregamento e imprimir
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                    
+                    // Feedback de sucesso
+                    exportBtn.innerHTML = '✅ PDF Gerado!';
+                    setTimeout(() => {
+                        exportBtn.innerHTML = originalText;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Erro ao exportar PDF:', error);
+                    alert('Erro ao gerar PDF. Verifique se os dados estão completos e tente novamente.');
+                } finally {
+                    exportBtn.disabled = false;
+                    if (exportBtn.innerHTML.includes('Preparando')) {
+                        exportBtn.innerHTML = originalText;
+                    }
+                }
+            }
+
+            // Event listeners para novos botões
+            document.getElementById('show-report-btn').addEventListener('click', showReport);
+            document.getElementById('hide-report-btn').addEventListener('click', hideReport);
+            document.getElementById('generate-ai-analysis-btn').addEventListener('click', generateAIAnalysis);
+            document.getElementById('export-pdf-btn').addEventListener('click', exportToPDF);
+
+            const apiModal = document.getElementById('api-settings-modal');
+            document.getElementById('api-settings-btn').addEventListener('click', () => { apiModal.style.display = 'flex'; document.getElementById('api-key-input').value = geminiApiKey; document.getElementById('api-key-feedback').textContent = ''; });
+            document.getElementById('close-api-modal-btn').addEventListener('click', () => apiModal.style.display = 'none');
+            document.getElementById('save-api-key-btn').addEventListener('click', () => {
+                geminiApiKey = document.getElementById('api-key-input').value;
+                localStorage.setItem('geminiApiKey', geminiApiKey);
+                const feedback = document.getElementById('api-key-feedback');
+                feedback.textContent = 'Chave salva com sucesso!';
+                feedback.className = 'text-sm mt-2 text-green-600';
+                setTimeout(() => { apiModal.style.display = 'none'; }, 1500);
+            });
+
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    lightIcon.classList.remove('hidden');
+                    darkIcon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    darkIcon.classList.remove('hidden');
+                    lightIcon.classList.add('hidden');
+                }
+            };
+            const initialTheme = localStorage.getItem('color-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(initialTheme);
+            themeToggleBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                const newTheme = isDark ? 'light' : 'dark';
+                localStorage.setItem('color-theme', newTheme);
+                applyTheme(newTheme);
+            });
+
+            geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+            document.getElementById('add-company').addEventListener('click', () => { if (companies.length < 10) { companies.push(`Empresa ${companies.length + 1}`); renderAll(); } });
+            document.getElementById('add-criterion-btn').addEventListener('click', addCriterion);
+
+            // --- PERFIS DE DECISÃO ---
+            const decisionProfiles = {
+                conservative: {
+                    name: 'Conservador',
+                    weights: {
+                        'valor_total': 0.30,
+                        'payback': 0.25,
+                        'valor_estrutura': 0.15,
+                        'garantia_painel': 0.10,
+                        'garantia_inversor': 0.08,
+                        'geracao_prevista': 0.07,
+                        'taxa_eficiencia_painel': 0.03,
+                        'garantia_servico': 0.02,
+                        'quantidade_placas': 0.00
+                    }
+                },
+                balanced: {
+                    name: 'Equilibrado',
+                    weights: {
+                        'valor_total': 0.25,
+                        'payback': 0.15,
+                        'geracao_prevista': 0.15,
+                        'taxa_eficiencia_painel': 0.12,
+                        'garantia_painel': 0.10,
+                        'valor_estrutura': 0.08,
+                        'garantia_inversor': 0.07,
+                        'quantidade_placas': 0.05,
+                        'garantia_servico': 0.03
+                    }
+                },
+                performance: {
+                    name: 'Performance',
+                    weights: {
+                        'geracao_prevista': 0.25,
+                        'taxa_eficiencia_painel': 0.20,
+                        'valor_total': 0.15,
+                        'garantia_painel': 0.12,
+                        'payback': 0.10,
+                        'garantia_inversor': 0.08,
+                        'quantidade_placas': 0.07,
+                        'valor_estrutura': 0.02,
+                        'garantia_servico': 0.01
+                    }
+                }
+            };
+
+            function applyDecisionProfile(profileKey) {
+                const profile = decisionProfiles[profileKey];
+                if (!profile) return;
+
+                // Aplicar pesos do perfil
+                criteria.forEach(criterion => {
+                    if (profile.weights[criterion.id] !== undefined) {
+                        criterion.weight = profile.weights[criterion.id];
+                    }
+                });
+
+                // Mostrar feedback
+                const feedback = document.createElement('div');
+                feedback.className = 'fixed top-4 right-4 p-3 rounded-lg shadow-lg z-50';
+                feedback.style.backgroundColor = 'var(--success-bg)';
+                feedback.style.borderColor = 'var(--success)';
+                feedback.style.border = '1px solid';
+                feedback.style.color = 'var(--success)';
+                feedback.innerHTML = `✓ Perfil "${profile.name}" aplicado com sucesso!`;
+                document.body.appendChild(feedback);
+
+                setTimeout(() => {
+                    feedback.remove();
+                }, 3000);
+
+                // Re-renderizar
+                renderAll();
+            }
+
+            // Event listeners para os perfis
+            document.getElementById('profile-conservative').addEventListener('click', () => applyDecisionProfile('conservative'));
+            document.getElementById('profile-balanced').addEventListener('click', () => applyDecisionProfile('balanced'));
+            document.getElementById('profile-performance').addEventListener('click', () => applyDecisionProfile('performance'));
+
+            // Event listener para limpar dados
+            document.getElementById('clear-data-btn').addEventListener('click', clearSavedData);
+
+            // --- INICIALIZAÇÃO ---
+            // Carregar dados salvos primeiro
+            const dataLoaded = loadProposalData();
+            if (dataLoaded) {
+                showSaveStatus('Dados carregados do armazenamento local ✓', 'success');
+            }
+
+            // Adicionar listeners para os novos campos
+            addAnalysisObjectListeners();
+
+            // Adicionar listeners para auto-save em todos os inputs existentes
+            document.addEventListener('input', (e) => {
+                if (e.target.matches('.data-input') || e.target.matches('input[type="text"]') || e.target.matches('textarea')) {
+                    debouncedSave();
+                }
+            });
+
+            // Adicionar listener para mudanças em selects
+            document.addEventListener('change', (e) => {
+                if (e.target.matches('select') || e.target.matches('.comparison-select')) {
+                    debouncedSave();
+                }
+            });
+
+            renderAll();
+        });
+    </script>
+</body>
+
+</html>

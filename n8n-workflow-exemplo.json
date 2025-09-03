@@ -1,0 +1,103 @@
+{
+  "name": "AHP Comparador de Propostas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ahp-form",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook - Formulário",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!DOCTYPE html>\n<html>\n<head>\n    <title>Comparador AHP</title>\n    <style>\n        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }\n        .form-group { margin: 15px 0; }\n        label { display: block; margin-bottom: 5px; font-weight: bold; }\n        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }\n        .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }\n        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }\n    </style>\n</head>\n<body>\n    <h1>🏆 Comparador de Propostas AHP</h1>\n    <form action=\"/webhook/ahp-analisar\" method=\"POST\">\n        <h2>Empresas</h2>\n        <div class=\"form-group\">\n            <label>Empresa 1:</label>\n            <input name=\"empresa1\" value=\"Empresa A\" required>\n        </div>\n        <div class=\"form-group\">\n            <label>Empresa 2:</label>\n            <input name=\"empresa2\" value=\"Empresa B\" required>\n        </div>\n        \n        <h2>Dados Empresa 1</h2>\n        <div class=\"grid\">\n            <div class=\"form-group\">\n                <label>Valor Total (R$):</label>\n                <input type=\"number\" name=\"emp1_valor\" step=\"0.01\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Geração (kWh/mês):</label>\n                <input type=\"number\" name=\"emp1_geracao\" step=\"0.01\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Payback (anos):</label>\n                <input type=\"number\" name=\"emp1_payback\" step=\"0.1\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Eficiência (%):</label>\n                <input type=\"number\" name=\"emp1_eficiencia\" step=\"0.1\" required>\n            </div>\n        </div>\n        \n        <h2>Dados Empresa 2</h2>\n        <div class=\"grid\">\n            <div class=\"form-group\">\n                <label>Valor Total (R$):</label>\n                <input type=\"number\" name=\"emp2_valor\" step=\"0.01\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Geração (kWh/mês):</label>\n                <input type=\"number\" name=\"emp2_geracao\" step=\"0.01\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Payback (anos):</label>\n                <input type=\"number\" name=\"emp2_payback\" step=\"0.1\" required>\n            </div>\n            <div class=\"form-group\">\n                <label>Eficiência (%):</label>\n                <input type=\"number\" name=\"emp2_eficiencia\" step=\"0.1\" required>\n            </div>\n        </div>\n        \n        <div class=\"form-group\">\n            <label>Perfil de Decisão:</label>\n            <select name=\"perfil\">\n                <option value=\"conservador\">💰 Conservador</option>\n                <option value=\"equilibrado\" selected>⚖️ Equilibrado</option>\n                <option value=\"performance\">🚀 Performance</option>\n            </select>\n        </div>\n        \n        <button type=\"submit\" class=\"btn\">🔍 Analisar Propostas</button>\n    </form>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "2",
+      "name": "Responder Formulário",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ahp-analisar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3",
+      "name": "Webhook - Análise",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Função de análise AHP integrada\nconst dados = $input.first().json.body;\n\n// Pesos por perfil\nconst pesos = {\n  conservador: { valor: 0.35, geracao: 0.10, payback: 0.30, eficiencia: 0.25 },\n  equilibrado: { valor: 0.25, geracao: 0.25, payback: 0.25, eficiencia: 0.25 },\n  performance: { valor: 0.15, geracao: 0.35, payback: 0.15, eficiencia: 0.35 }\n};\n\nconst pesoEscolhido = pesos[dados.perfil || 'equilibrado'];\n\n// Monta array de empresas\nconst empresas = [\n  {\n    nome: dados.empresa1,\n    valor: parseFloat(dados.emp1_valor),\n    geracao: parseFloat(dados.emp1_geracao),\n    payback: parseFloat(dados.emp1_payback),\n    eficiencia: parseFloat(dados.emp1_eficiencia)\n  },\n  {\n    nome: dados.empresa2,\n    valor: parseFloat(dados.emp2_valor),\n    geracao: parseFloat(dados.emp2_geracao),\n    payback: parseFloat(dados.emp2_payback),\n    eficiencia: parseFloat(dados.emp2_eficiencia)\n  }\n];\n\n// Calcula scores normalizados\nconst criterios = ['valor', 'geracao', 'payback', 'eficiencia'];\nconst criteriosCusto = ['valor', 'payback'];\n\nempresas.forEach(empresa => {\n  empresa.score = 0;\n  \n  criterios.forEach(criterio => {\n    const valores = empresas.map(e => e[criterio]);\n    const min = Math.min(...valores);\n    const max = Math.max(...valores);\n    \n    let scoreNormalizado;\n    if (criteriosCusto.includes(criterio)) {\n      scoreNormalizado = max === min ? 5 : 5 - ((empresa[criterio] - min) / (max - min)) * 4;\n    } else {\n      scoreNormalizado = max === min ? 5 : 1 + ((empresa[criterio] - min) / (max - min)) * 4;\n    }\n    \n    empresa.score += scoreNormalizado * pesoEscolhido[criterio];\n  });\n});\n\n// Ordena por score\nempresas.sort((a, b) => b.score - a.score);\n\nreturn [{ json: { ranking: empresas, perfil: dados.perfil } }];"
+      },
+      "id": "4",
+      "name": "Calcular AHP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html>\n<head>\n    <title>Resultado AHP</title>\n    <style>\n        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }\n        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }\n        .result { background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #007bff; }\n        .winner { border-left-color: #28a745; background: #d4edda; }\n        .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; text-decoration: none; display: inline-block; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>🏆 Resultado da Análise AHP</h1>\n        <p><strong>Perfil usado:</strong> {{ $json.perfil }}</p>\n        \n        {{ $json.ranking.map((empresa, index) => `\n        <div class=\"result ${index === 0 ? 'winner' : ''}\">\n            <h3>${index + 1}º Lugar - ${empresa.nome} ${index === 0 ? '🏆' : ''}</h3>\n            <p><strong>Score Final:</strong> ${empresa.score.toFixed(2)}/5.00</p>\n            <p><strong>Valor:</strong> R$ ${empresa.valor.toLocaleString('pt-BR')}</p>\n            <p><strong>Geração:</strong> ${empresa.geracao} kWh/mês</p>\n            <p><strong>Payback:</strong> ${empresa.payback} anos</p>\n            <p><strong>Eficiência:</strong> ${empresa.eficiencia}%</p>\n        </div>\n        `).join('') }}\n        \n        <div style=\"text-align: center; margin-top: 30px;\">\n            <a href=\"/webhook/ahp-form\" class=\"btn\">🔄 Nova Análise</a>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "5",
+      "name": "Responder Resultado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    }
+  ],
+  "connections": {
+    "Webhook - Formulário": {
+      "main": [
+        [
+          {
+            "node": "Responder Formulário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Análise": {
+      "main": [
+        [
+          {
+            "node": "Calcular AHP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular AHP": {
+      "main": [
+        [
+          {
+            "node": "Responder Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+}

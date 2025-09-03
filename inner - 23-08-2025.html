@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferramenta AHP para Comparar Propostas de Energia Solar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Paleta de Cores Aprimorada: Azul Profissional & Verde-Azul Sustentável -->
+    <!-- Estrutura da Aplicação: Uma SPA orientada a tarefas. A estrutura segue o fluxo de trabalho do AHP: 1. Definir alternativas. 2. Definir e ordenar critérios com pesos, incluindo verificação de consistência. 3. Inserir dados brutos. 4. Ver pontuações normalizadas. 5. Ver resultados finais. 6. Gerar um relatório. -->
+    <!-- Visualização e Conteúdo: O relatório inclui critérios, resultados e uma análise por IA. Um elemento de UI exibe a Razão de Consistência (CR) com cores para indicar aprovação/reprovação, atualizando em tempo real. -->
+    <style>
+        :root {
+            /* Tema Claro - Paleta aprimorada */
+            --bg-primary: #fafbfc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-header: linear-gradient(135deg, #2c5530 0%, #3d7c47 100%);
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --text-white: #ffffff;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e0;
+            --shadow-light: rgba(0, 0, 0, 0.05);
+            --shadow-medium: rgba(0, 0, 0, 0.1);
+            --accent-green: #38a169;
+            --accent-blue: #3182ce;
+            --accent-orange: #dd6b20;
+            --hover-bg: #f7fafc;
+            --input-bg: #f8fafc;
+            --success: #48bb78;
+            --warning: #ed8936;
+            --info: #4299e1;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+        }
+
+        [data-theme="dark"] {
+            /* Tema Escuro - Paleta aprimorada */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a202c;
+            --bg-card: #1a202c;
+            --bg-header: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            --text-primary: #f7fafc;
+            --text-secondary: #e2e8f0;
+            --text-muted: #a0aec0;
+            --text-white: #ffffff;
+            --border-light: #2d3748;
+            --border-medium: #4a5568;
+            --shadow-light: rgba(0, 0, 0, 0.2);
+            --shadow-medium: rgba(0, 0, 0, 0.3);
+            --accent-green: #68d391;
+            --accent-blue: #63b3ed;
+            --accent-orange: #f6ad55;
+            --hover-bg: #2d3748;
+            --input-bg: #2d3748;
+            --success: #68d391;
+            --warning: #f6ad55;
+            --info: #63b3ed;
+            --slate-100: #f1f5f9;
+            --slate-200: #334155;
+            --slate-300: #475569;
+            --slate-400: #64748b;
+            --slate-500: #94a3b8;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        /* Aplicar tema escuro quando classe dark estiver presente */
+        .dark {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a202c;
+            --bg-card: #1a202c;
+            --bg-header: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            --text-primary: #f7fafc;
+            --text-secondary: #e2e8f0;
+            --text-muted: #a0aec0;
+            --text-white: #ffffff;
+            --border-light: #2d3748;
+            --border-medium: #4a5568;
+            --shadow-light: rgba(0, 0, 0, 0.2);
+            --shadow-medium: rgba(0, 0, 0, 0.3);
+            --accent-green: #68d391;
+            --accent-blue: #63b3ed;
+            --accent-orange: #f6ad55;
+            --hover-bg: #2d3748;
+            --input-bg: #2d3748;
+            --success: #68d391;
+            --warning: #f6ad55;
+            --info: #63b3ed;
+            --slate-100: #334155;
+            --slate-200: #334155;
+            --slate-300: #475569;
+            --slate-400: #64748b;
+            --slate-500: #94a3b8;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+        }
+
+        .matrix-cell,
+        .normalized-score-cell {
+            background-color: var(--slate-100);
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            color: var(--text-primary);
+        }
+
+        .comparison-select,
+        .data-input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--slate-300);
+            text-align: center;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .comparison-select:focus,
+        .data-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .result-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: var(--bg-card);
+            border-color: var(--border-light);
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px var(--shadow-medium), 0 4px 6px -2px var(--shadow-light);
+        }
+
+        .criterion-type-toggle {
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 0 0.5rem;
+            border-radius: 50%;
+            color: var(--accent-blue);
+            transition: all 0.3s ease;
+        }
+
+        .criterion-type-toggle:hover {
+            background-color: var(--hover-bg);
+        }
+
+        #report-modal,
+        #api-settings-modal {
+            display: none;
+        }
+
+        .draggable-row {
+            cursor: grab;
+            background-color: var(--bg-card);
+            transition: all 0.3s ease;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            background: var(--accent-blue) !important;
+            color: var(--text-white) !important;
+        }
+
+        .drag-over {
+            border-top: 2px solid var(--accent-green);
+        }
+
+        .loader {
+            border: 4px solid var(--slate-200);
+            border-top: 4px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Melhorias nos cards de seção */
+        section {
+            background-color: var(--bg-card) !important;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 6px -1px var(--shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        /* Melhorias nos botões */
+        button {
+            transition: all 0.3s ease;
+        }
+
+        .bg-blue-600 {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--info) 100%) !important;
+        }
+
+        .bg-green-600 {
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--success) 100%) !important;
+        }
+
+        .hover\:bg-blue-700:hover {
+            background: linear-gradient(135deg, #2c5aa0 0%, #2779bd 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+        }
+
+        .hover\:bg-green-700:hover {
+            background: linear-gradient(135deg, #2f855a 0%, #38a169 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(56, 161, 105, 0.3);
+        }
+
+        /* Header melhorado */
+        header h1 {
+            background: var(--bg-header);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        /* Consistência de cores com Tailwind */
+        .bg-slate-100 {
+            background-color: var(--bg-primary) !important;
+        }
+
+        .dark\:bg-slate-900 {
+            background-color: var(--bg-primary) !important;
+        }
+
+        .bg-white {
+            background-color: var(--bg-card) !important;
+        }
+
+        .dark\:bg-slate-800 {
+            background-color: var(--bg-card) !important;
+        }
+
+        .text-slate-800 {
+            color: var(--text-primary) !important;
+        }
+
+        .dark\:text-slate-200 {
+            color: var(--text-primary) !important;
+        }
+
+        .text-slate-900 {
+            color: var(--text-primary) !important;
+        }
+
+        .dark\:text-white {
+            color: var(--text-primary) !important;
+        }
+
+        .border-slate-200 {
+            border-color: var(--border-light) !important;
+        }
+
+        .dark\:border-slate-700 {
+            border-color: var(--border-light) !important;
+        }
+
+        .bg-slate-50 {
+            background-color: var(--input-bg) !important;
+        }
+
+        .dark\:bg-slate-700 {
+            background-color: var(--input-bg) !important;
+        }
+
+        .border-slate-300 {
+            border-color: var(--border-medium) !important;
+        }
+
+        .dark\:border-slate-600 {
+            border-color: var(--border-medium) !important;
+        }
+
+        /* Estilos de Impressão */
+        @media print {
+            .dark {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            html,
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            body>*:not(#report-modal) {
+                display: none;
+            }
+
+            #report-modal {
+                display: block !important;
+                position: static;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+                background-color: transparent;
+                padding: 0;
+            }
+
+            #report-modal>div {
+                box-shadow: none;
+                border: none;
+                max-height: none;
+                height: auto;
+                background-color: #ffffff !important;
+            }
+
+            #report-header,
+            #report-footer {
+                display: none;
+            }
+
+            #report-content {
+                overflow: visible;
+            }
+
+            .print-light-theme * {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+        }
+
+        /* Animações suaves */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-300">
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">Análise de Propostas (AHP)</h1>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle-btn"
+                    class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm p-2.5"
+                    title="Alternar tema">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 12a5 5 0 100-10 5 5 0 000 10z">
+                        </path>
+                    </svg>
+                </button>
+                <button id="api-settings-btn"
+                    class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm p-2.5"
+                    title="Configurações da IA">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+        <main id="main-content">
+            <!-- Seção 1: Empresas -->
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">1. Empresas
+                    Concorrentes</h2>
+                <div id="company-inputs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <button id="add-company"
+                    class="mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">+
+                    Adicionar Empresa</button>
+            </section>
+            <!-- Seção 2: Critérios e Pesos -->
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">2.
+                    Definição de Pesos dos Critérios</h2>
+                <p class="mb-4 text-slate-600 dark:text-slate-400">Arraste (⠿) para reordenar. Use ▼ para "menor é
+                    melhor" e ▲ para "maior é melhor".</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse table-fixed">
+                        <thead id="matrix-head"></thead>
+                        <tbody id="matrix-body"></tbody>
+                    </table>
+                </div>
+                <div class="flex flex-wrap justify-between items-start mt-6">
+                    <div id="weights-display" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 flex-grow">
+                    </div>
+                    <div id="consistency-check-display"
+                        class="mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto"></div>
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <h3 class="text-lg font-semibold mb-2">Adicionar Novo Critério</h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="new-criterion-name" placeholder="Nome do novo critério"
+                            class="border p-2 rounded-md flex-grow bg-slate-50 dark:bg-slate-700 border-slate-300 dark:border-slate-600">
+                        <button id="add-criterion-btn"
+                            class="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">Adicionar
+                            Critério</button>
+                    </div>
+                </div>
+            </section>
+            <!-- Seção 3: Dados Brutos -->
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">3. Dados
+                    das Propostas</h2>
+                <p class="mb-4 text-slate-600 dark:text-slate-400">Insira os valores REAIS de cada proposta.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead id="data-head"></thead>
+                        <tbody id="data-body"></tbody>
+                    </table>
+                </div>
+            </section>
+            <!-- Seção 4: Pontuações Normalizadas -->
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">4.
+                    Pontuações Normalizadas (1-5)</h2>
+                <p class="mb-4 text-slate-600 dark:text-slate-400">Notas calculadas automaticamente com base nos dados
+                    inseridos.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead id="normalized-head"></thead>
+                        <tbody id="normalized-body"></tbody>
+                    </table>
+                </div>
+            </section>
+            <!-- Seção 5: Ranking Final -->
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">5. Ranking
+                    Final</h2>
+                <div id="results-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+            <!-- Seção 6: Gerar Relatório -->
+            <section class="text-center">
+                <button id="generate-report-btn"
+                    class="bg-slate-800 hover:bg-slate-900 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">Gerar
+                    Relatório de Decisão</button>
+            </section>
+        </main>
+        <footer
+            class="text-center p-4 mt-8 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+            <p>Produzido por: Daniel Ávila, para o condomínio Morada Nobre em 2025</p>
+        </footer>
+    </div>
+    <!-- Modal do Relatório -->
+    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div id="report-header"
+                class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Relatório de Tomada de Decisão</h2><button id="close-report-btn"
+                    class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-3xl">&times;</button>
+            </div>
+            <div id="report-content" class="p-6 overflow-y-auto"></div>
+            <div id="report-footer"
+                class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3">
+                <button id="print-report-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Imprimir</button><button
+                    id="close-report-btn-2"
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500 font-bold py-2 px-4 rounded-md">Fechar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Configurações da API -->
+    <div id="api-settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-4">Configurações da API Gemini</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Insira sua chave de API do Google Gemini para
+                habilitar a análise por IA no relatório.</p>
+            <div><label for="api-key-input" class="block mb-2 text-sm font-medium">Chave de API</label><input
+                    type="password" id="api-key-input"
+                    class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-slate-700 dark:border-slate-600 dark:placeholder-slate-400 dark:text-white">
+            </div>
+            <div id="api-key-feedback" class="text-sm mt-2"></div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="save-api-key-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Salvar</button>
+                <button id="close-api-modal-btn"
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500 font-bold py-2 px-4 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ESTADO INICIAL DA APLICAÇÃO ---
+            let criteria = [
+                { id: 'potencia_sistema', name: 'Potência do Sistema', weight: 0.052, type: 'benefit', placeholder: 'kWp' },
+                { id: 'geracao_prevista', name: 'Geração Prevista', weight: 0.052, type: 'benefit', placeholder: 'kWh/mês' },
+                { id: 'tipo_estrutura', name: 'Tipo de Estrutura', weight: 0.052, type: 'benefit', placeholder: '1-5' },
+                { id: 'valor_estrutura', name: 'Valor da Estrutura', weight: 0.052, type: 'cost', placeholder: 'R$' },
+                { id: 'micro_inversor', name: 'Micro Inversor', weight: 0.052, type: 'benefit', placeholder: '1-5' },
+                { id: 'quantidade_placas', name: 'Quantidade de Placas', weight: 0.052, type: 'benefit', placeholder: 'Unid.' },
+                { id: 'paineis_solares', name: 'Painéis Solares', weight: 0.052, type: 'benefit', placeholder: '1-5' },
+                { id: 'taxa_eficiencia_painel', name: 'Eficiência do Painel', weight: 0.052, type: 'benefit', placeholder: '%' },
+                { id: 'tipo_celula', name: 'Tipo de Célula', weight: 0.052, type: 'benefit', placeholder: '1-5' },
+                { id: 'taxa_degradacao_anual', name: 'Degradação Anual', weight: 0.052, type: 'cost', placeholder: '%' },
+                { id: 'garantia_painel', name: 'Garantia Painel', weight: 0.052, type: 'benefit', placeholder: 'Anos' },
+                { id: 'garantia_inversor', name: 'Garantia Inversor', weight: 0.052, type: 'benefit', placeholder: 'Anos' },
+                { id: 'garantia_servico', name: 'Garantia Serviço', weight: 0.052, type: 'benefit', placeholder: 'Anos' },
+                { id: 'area_necessaria', name: 'Área Necessária', weight: 0.052, type: 'cost', placeholder: 'm²' },
+                { id: 'economia_mensal', name: 'Economia Mensal', weight: 0.052, type: 'benefit', placeholder: 'R$' },
+                { id: 'producao_anual', name: 'Produção Anual', weight: 0.052, type: 'benefit', placeholder: 'kWh' },
+                { id: 'economia_anual', name: 'Economia Anual', weight: 0.052, type: 'benefit', placeholder: 'R$' },
+                { id: 'payback', name: 'Payback', weight: 0.052, type: 'cost', placeholder: 'Anos' },
+                { id: 'valor_total', name: 'Valor Total', weight: 0.052, type: 'cost', placeholder: 'R$' }
+            ];
+            const ahpScale = [
+                { text: 'Extremamente mais importante', value: 9 }, { text: 'Muito mais importante', value: 7 }, { text: 'Mais importante', value: 5 }, { text: 'Levemente mais importante', value: 3 },
+                { text: 'Igualmente importante', value: 1 }, { text: 'Levemente menos importante', value: 1 / 3 }, { text: 'Menos importante', value: 1 / 5 }, { text: 'Muito menos importante', value: 1 / 7 },
+                { text: 'Extremamente menos importante', value: 1 / 9 },
+            ];
+
+            // Índices de Aleatoriedade corrigidos (Random Index - RI)
+            const randomIndex = {
+                1: 0, 2: 0, 3: 0.52, 4: 0.89, 5: 1.11, 6: 1.25, 7: 1.35, 8: 1.40,
+                9: 1.45, 10: 1.49, 11: 1.51, 12: 1.54, 13: 1.56, 14: 1.57, 15: 1.59,
+                16: 1.605, 17: 1.61, 18: 1.615, 19: 1.62, 20: 1.625
+            };
+
+            let companies = ['Empresa 1', 'Empresa 2'];
+            let rawData = {};
+            let normalizedScores = {};
+            let finalResults = [];
+            let dragStartIndex;
+            let geminiApiKey = '';
+
+            // --- FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO ---
+            function renderAll() {
+                renderCompanyInputs();
+                renderMatrix();
+                renderDataTable();
+                normalizeAndDisplayScores();
+                calculateAndDisplayResults();
+            }
+            // --- RENDERIZAÇÃO DAS SEÇÕES ---
+            function renderCompanyInputs() {
+                const container = document.getElementById('company-inputs');
+                container.innerHTML = '';
+                companies.forEach((name, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-2';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = name;
+                    input.className = 'company-name border p-2 rounded-md w-full bg-slate-50 dark:bg-slate-700 border-slate-300 dark:border-slate-600';
+                    input.addEventListener('change', (e) => { companies[index] = e.target.value; renderAll(); });
+                    const button = document.createElement('button');
+                    button.innerHTML = '&times;';
+                    button.className = 'delete-company text-red-500 hover:text-red-700 font-bold text-2xl leading-none';
+                    button.title = 'Excluir Empresa';
+                    button.addEventListener('click', () => deleteCompany(index));
+                    div.appendChild(input);
+                    div.appendChild(button);
+                    container.appendChild(div);
+                });
+            }
+            function renderMatrix() {
+                const matrixHead = document.getElementById('matrix-head');
+                const matrixBody = document.getElementById('matrix-body');
+                const borderClass = 'border border-slate-200 dark:border-slate-700';
+                matrixHead.innerHTML = `<tr><th class="p-2 ${borderClass} w-10"></th><th class="p-2 ${borderClass} w-48">Critério</th>${criteria.map(c => `<th class="p-2 ${borderClass} text-xs font-medium">${c.name}</th>`).join('')}</tr>`;
+                matrixBody.innerHTML = '';
+                criteria.forEach((rowCriterion, i) => {
+                    const row = document.createElement('tr');
+                    row.className = 'draggable-row';
+                    row.setAttribute('draggable', 'true');
+                    row.dataset.index = i;
+                    let rowHTML = `<td class="p-2 ${borderClass} text-center text-slate-400" title="Arrastar para reordenar">⠿</td><td class="p-2 ${borderClass} font-semibold text-sm w-48"><div class="flex justify-between items-center gap-2"><span>${rowCriterion.name}</span><div><button class="criterion-type-toggle" data-index="${i}" title="${rowCriterion.type === 'benefit' ? 'Maior é Melhor' : 'Menor é Melhor'}">${rowCriterion.type === 'benefit' ? '▲' : '▼'}</button><button class="delete-criterion text-red-500 hover:text-red-700 font-bold text-xl leading-none" data-index="${i}" title="Excluir Critério">&times;</button></div></div></td>`;
+                    criteria.forEach((colCriterion, j) => {
+                        if (i === j) rowHTML += `<td class="p-1 ${borderClass}"><div class="matrix-cell">1</div></td>`;
+                        else if (i < j) {
+                            const ratio = rowCriterion.weight / colCriterion.weight;
+                            const closest = ahpScale.reduce((p, c) => (Math.abs(c.value - ratio) < Math.abs(p.value - ratio) ? c : p));
+                            rowHTML += `<td class="p-1 ${borderClass}"><select class="comparison-select" data-row="${i}" data-col="${j}">${ahpScale.map(s => `<option value="${s.value}" ${s.value === closest.value ? 'selected' : ''}>${s.text}</option>`).join('')}</select></td>`;
+                        } else {
+                            rowHTML += `<td class="p-1 ${borderClass}"><div id="inverse-${i}-${j}" class="matrix-cell"></div></td>`;
+                        }
+                    });
+                    row.innerHTML = rowHTML;
+                    matrixBody.appendChild(row);
+                });
+                addDragDropListeners();
+                document.querySelectorAll('.comparison-select').forEach(s => s.addEventListener('change', calculateWeights));
+                document.querySelectorAll('.delete-criterion').forEach(b => b.addEventListener('click', (e) => deleteCriterion(parseInt(e.currentTarget.dataset.index))));
+                document.querySelectorAll('.criterion-type-toggle').forEach(b => b.addEventListener('click', (e) => toggleCriterionType(parseInt(e.currentTarget.dataset.index))));
+                calculateWeights();
+            }
+            function renderDataTable() {
+                const dataHead = document.getElementById('data-head');
+                const dataBody = document.getElementById('data-body');
+                const borderClass = 'border border-slate-200 dark:border-slate-700';
+                dataHead.innerHTML = `<tr><th class="p-2 ${borderClass}">Critério</th>${companies.map(name => `<th class="p-2 ${borderClass} text-center">${name}</th>`).join('')}</tr>`;
+                dataBody.innerHTML = criteria.map(c => `<tr><td class="p-2 ${borderClass} font-semibold text-sm">${c.name}</td>${companies.map((_, companyIndex) => `<td class="p-1 ${borderClass}"><input type="number" step="any" min="0" id="data-${c.id}-${companyIndex}" class="data-input" value="${rawData[`data-${c.id}-${companyIndex}`] || ''}" placeholder="${c.placeholder || ''}"></td>`).join('')}</tr>`).join('');
+                document.querySelectorAll('.data-input').forEach(input => {
+                    input.addEventListener('input', (e) => { rawData[e.target.id] = e.target.value; normalizeAndDisplayScores(); calculateAndDisplayResults(); });
+                });
+            }
+            function normalizeAndDisplayScores() {
+                normalizedScores = {};
+                const normalizedBody = document.getElementById('normalized-body');
+                const normalizedHead = document.getElementById('normalized-head');
+                const borderClass = 'border border-slate-200 dark:border-slate-700';
+                normalizedHead.innerHTML = `<tr><th class="p-2 ${borderClass}">Critério</th>${companies.map(name => `<th class="p-2 ${borderClass} text-center">${name}</th>`).join('')}</tr>`;
+                let tableHTML = '';
+                criteria.forEach(c => {
+                    let values = companies.map((_, i) => parseFloat(rawData[`data-${c.id}-${i}`])).filter(v => !isNaN(v));
+                    if (values.length === 0) {
+                        companies.forEach((_, i) => normalizedScores[`score-${c.id}-${i}`] = 1);
+                    } else {
+                        if (c.type === 'benefit') {
+                            const max = Math.max(...values.map(v => isNaN(v) ? -Infinity : v));
+                            companies.forEach((_, i) => { const val = parseFloat(rawData[`data-${c.id}-${i}`]); normalizedScores[`score-${c.id}-${i}`] = (isNaN(val) || max === 0) ? 1 : (val / max) * 4 + 1; });
+                        } else { // cost
+                            const min = Math.min(...values.map(v => isNaN(v) || v === 0 ? Infinity : v));
+                            companies.forEach((_, i) => { const val = parseFloat(rawData[`data-${c.id}-${i}`]); normalizedScores[`score-${c.id}-${i}`] = (isNaN(val) || val === 0) ? 1 : (min / val) * 4 + 1; });
+                        }
+                    }
+                    tableHTML += `<tr><td class="p-2 ${borderClass} font-semibold text-sm">${c.name}</td>${companies.map((_, i) => `<td class="p-1 ${borderClass} text-center"><div class="normalized-score-cell">${(normalizedScores[`score-${c.id}-${i}`] || 1).toFixed(2)}</div></td>`).join('')}</tr>`;
+                });
+                normalizedBody.innerHTML = tableHTML;
+            }
+            function calculateAndDisplayResults() {
+                const container = document.getElementById('results-container');
+                container.innerHTML = '';
+                if (criteria.length === 0 || companies.length === 0) return;
+                let companyScores = Array(companies.length).fill(0);
+                companies.forEach((_, i) => { criteria.forEach(c => { companyScores[i] += (parseFloat(normalizedScores[`score-${c.id}-${i}`] || 0) * c.weight); }); });
+                finalResults = companies.map((name, index) => ({ name, score: companyScores[index] })).sort((a, b) => b.score - a.score);
+                finalResults.forEach((company, index) => {
+                    const rank = index + 1;
+                    let bgColor = 'bg-white dark:bg-slate-800';
+                    let borderColor = 'border-slate-200 dark:border-slate-700';
+                    if (rank === 1) { bgColor = 'bg-green-100 dark:bg-green-900/50'; borderColor = 'border-green-400'; }
+                    else if (rank === 2) { bgColor = 'bg-yellow-100 dark:bg-yellow-900/50'; borderColor = 'border-yellow-400'; }
+                    else if (rank === 3) { bgColor = 'bg-orange-100 dark:bg-orange-900/50'; borderColor = 'border-orange-400'; }
+                    const card = document.createElement('div');
+                    card.className = `result-card p-4 rounded-lg shadow-md border-2 ${bgColor} ${borderColor}`;
+                    card.innerHTML = `<div class="flex items-baseline justify-between"><h3 class="text-xl font-bold">${company.name}</h3><span class="text-2xl font-black text-slate-700 dark:text-slate-300">#${rank}</span></div><p class="text-3xl font-bold text-center my-4 text-blue-700 dark:text-blue-400">${(company.score * 20).toFixed(2)} / 100</p><p class="text-xs text-center text-slate-500 dark:text-slate-400">Pontuação Final: ${company.score.toFixed(4)}</p>`;
+                    container.appendChild(card);
+                });
+            }
+
+            // --- LÓGICA DE CÁLCULO AHP CORRIGIDA ---
+            function calculateWeights() {
+                const n = criteria.length;
+                if (n === 0) {
+                    displayWeights();
+                    displayConsistencyCheck(0, 0, false, 'N/A - Sem critérios');
+                    calculateAndDisplayResults();
+                    return;
+                }
+                if (n === 1) {
+                    criteria[0].weight = 1.0;
+                    displayWeights();
+                    displayConsistencyCheck(0, 0, true, 'N/A - Único critério');
+                    calculateAndDisplayResults();
+                    return;
+                }
+
+                // Construir matriz de comparação
+                let matrix = Array(n).fill(0).map(() => Array(n).fill(0));
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        if (i === j) {
+                            matrix[i][j] = 1;
+                        } else if (i < j) {
+                            const select = document.querySelector(`[data-row='${i}'][data-col='${j}']`);
+                            if (select) {
+                                const val = parseFloat(select.value);
+                                matrix[i][j] = val;
+                                matrix[j][i] = 1 / val;
+                                const inverseCell = document.getElementById(`inverse-${j}-${i}`);
+                                if (inverseCell) {
+                                    inverseCell.textContent = (1 / val).toFixed(3);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Calcular pesos usando método do autovetor principal
+                const weights = calculateEigenVector(matrix, n);
+                for (let i = 0; i < n; i++) {
+                    criteria[i].weight = weights[i];
+                }
+
+                displayWeights();
+                calculateAndDisplayConsistency(matrix, weights, n);
+                calculateAndDisplayResults();
+            }
+
+            // Método do autovetor principal melhorado
+            function calculateEigenVector(matrix, n) {
+                // Método das potências para encontrar o autovetor principal
+                let vector = Array(n).fill(1);
+                const maxIterations = 100;
+                const tolerance = 1e-8;
+
+                for (let iter = 0; iter < maxIterations; iter++) {
+                    let newVector = Array(n).fill(0);
+
+                    // Multiplicar matriz por vetor
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < n; j++) {
+                            newVector[i] += matrix[i][j] * vector[j];
+                        }
+                    }
+
+                    // Normalizar vetor
+                    const sum = newVector.reduce((a, b) => a + b, 0);
+                    if (sum === 0) break;
+
+                    for (let i = 0; i < n; i++) {
+                        newVector[i] = newVector[i] / sum;
+                    }
+
+                    // Verificar convergência
+                    let maxChange = 0;
+                    for (let i = 0; i < n; i++) {
+                        maxChange = Math.max(maxChange, Math.abs(newVector[i] - vector[i]));
+                    }
+
+                    vector = newVector;
+
+                    if (maxChange < tolerance) break;
+                }
+
+                return vector;
+            }
+
+            function calculateAndDisplayConsistency(matrix, weights, n) {
+                if (n <= 2) {
+                    displayConsistencyCheck(0, 0, true, 'N/A (≤ 2 critérios)');
+                    return;
+                }
+
+                // Calcular λmax (maior autovalor)
+                let lambdaMax = 0;
+                for (let i = 0; i < n; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < n; j++) {
+                        sum += matrix[i][j] * weights[j];
+                    }
+                    if (weights[i] !== 0) {
+                        lambdaMax += sum / weights[i];
+                    }
+                }
+                lambdaMax = lambdaMax / n;
+
+                // Calcular CI (Índice de Consistência)
+                const CI = (lambdaMax - n) / (n - 1);
+
+                // Obter RI (Índice Aleatório) corrigido
+                const RI = randomIndex[n] || randomIndex[20]; // Fallback para n > 20
+
+                // Calcular CR (Razão de Consistência)
+                const CR = RI === 0 ? 0 : CI / RI;
+
+                const isConsistent = CR <= 0.10; // Limiar padrão de 10%
+
+                displayConsistencyCheck(CI, CR, isConsistent);
+            }
+
+            function displayConsistencyCheck(CI, CR, isConsistent, customMessage = null) {
+                const container = document.getElementById('consistency-check-display');
+
+                if (customMessage) {
+                    container.innerHTML = `
+                        <p class="font-semibold text-sm">Verificação de Consistência</p>
+                        <p class="text-lg font-bold text-slate-600 dark:text-slate-400">${customMessage}</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Análise não aplicável</p>
+                    `;
+                    container.className = 'mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto bg-slate-100 dark:bg-slate-700';
+                    return;
+                }
+
+                const crPercentage = (CR * 100).toFixed(1);
+                const statusText = isConsistent ? 'Consistente' : 'Inconsistente';
+                const detailText = isConsistent ?
+                    'Julgamentos aceitos' :
+                    'Revisar comparações';
+
+                container.innerHTML = `
+                    <p class="font-semibold text-sm">Razão de Consistência</p>
+                    <p class="text-xl font-bold ${isConsistent ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">${crPercentage}%</p>
+                    <p class="text-xs ${isConsistent ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}">${statusText}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">${detailText}</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">CI: ${CI.toFixed(4)}</p>
+                `;
+
+                container.className = `mt-4 sm:mt-0 sm:ml-6 p-3 rounded-lg text-center w-full sm:w-auto ${isConsistent ?
+                    'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800' :
+                    'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
+                    }`;
+            }
+
+            function displayWeights() {
+                const container = document.getElementById('weights-display');
+                container.innerHTML = criteria.map(c => `<div class="bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-center"><p class="font-semibold text-sm">${c.name}</p><p class="text-xl font-bold text-blue-600 dark:text-blue-400">${(c.weight * 100).toFixed(1)}%</p></div>`).join('');
+            }
+
+            // --- MANIPULAÇÃO DE DADOS (ADICIONAR/REMOVER) ---
+            function addCriterion() {
+                const nameInput = document.getElementById('new-criterion-name');
+                const name = nameInput.value.trim();
+                if (name) {
+                    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+                    criteria.push({ id, name, weight: 1 / (criteria.length + 1), type: 'benefit', placeholder: 'Valor' });
+                    nameInput.value = '';
+                    renderAll();
+                }
+            }
+            function deleteCriterion(index) {
+                if (criteria.length <= 2) { return; }
+                const idToDelete = criteria[index].id;
+                Object.keys(rawData).forEach(key => { if (key.startsWith(`data-${idToDelete}-`)) delete rawData[key]; });
+                criteria.splice(index, 1);
+                renderAll();
+            }
+            function toggleCriterionType(index) {
+                criteria[index].type = criteria[index].type === 'benefit' ? 'cost' : 'benefit';
+                renderAll();
+            }
+            function deleteCompany(index) {
+                if (companies.length <= 1) { return; }
+                const newRawData = {};
+                Object.keys(rawData).forEach(key => {
+                    const parts = key.split('-');
+                    const criterionId = parts[1];
+                    const companyIndex = parseInt(parts[2]);
+                    if (companyIndex < index) newRawData[key] = rawData[key];
+                    else if (companyIndex > index) newRawData[`data-${criterionId}-${companyIndex - 1}`] = rawData[key];
+                });
+                rawData = newRawData;
+                companies.splice(index, 1);
+                renderAll();
+            }
+            // --- DRAG & DROP ---
+            function addDragDropListeners() {
+                const rows = document.querySelectorAll('#matrix-body tr');
+                rows.forEach(row => {
+                    row.addEventListener('dragstart', (e) => { dragStartIndex = parseInt(e.currentTarget.dataset.index); e.currentTarget.classList.add('dragging'); });
+                    row.addEventListener('dragenter', (e) => e.currentTarget.classList.add('drag-over'));
+                    row.addEventListener('dragover', (e) => e.preventDefault());
+                    row.addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
+                    row.addEventListener('drop', (e) => {
+                        const dropIndex = parseInt(e.currentTarget.dataset.index);
+                        const draggedItem = criteria.splice(dragStartIndex, 1)[0];
+                        criteria.splice(dropIndex, 0, draggedItem);
+                        e.currentTarget.classList.remove('drag-over');
+                        renderAll();
+                    });
+                    row.addEventListener('dragend', (e) => e.currentTarget.classList.remove('dragging'));
+                });
+            }
+            // --- RELATÓRIO E IA GEMINI ---
+            async function getGeminiAnalysis(reportDataText) {
+                const apiKey = geminiApiKey;
+                if (!apiKey) return "<strong>Erro:</strong> Chave de API do Gemini não configurada. Por favor, adicione a chave nas configurações (ícone de engrenagem).";
+                const prompt = `Você é um consultor especialista em energia solar. Analise os seguintes dados de uma comparação de propostas para um condomínio, gerados pelo método AHP. A pontuação final vai de 0 a 100.
+                **Dados da Análise:**
+                ${reportDataText}
+                **Sua Tarefa:**
+                Com base nos dados, escreva uma análise qualitativa concisa em português para ser incluída em um relatório. A análise deve conter:
+                1. **Resumo da Análise:** Uma breve introdução explicando que a análise foi feita com base nos critérios e pesos definidos, e qual empresa obteve a melhor pontuação.
+                2. **Pontos Fortes da Proposta Vencedora:** Identifique os critérios onde a empresa vencedora (${finalResults[0] ? finalResults[0].name : 'N/A'}) mais se destacou em comparação com as outras.
+                3. **Recomendação Final:** Com base na análise quantitativa, forneça uma recomendação clara e justificada para o condomínio.
+                Formate a resposta usando títulos com **negrito** e parágrafos simples.`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        console.error('API Error:', error);
+                        return `<strong>Erro na API:</strong> ${error.error?.message || 'Erro desconhecido'}`;
+                    }
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0) {
+                        return result.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                    }
+                    return '<strong>Erro:</strong> Resposta inválida da API.';
+                } catch (error) {
+                    console.error('Fetch Error:', error);
+                    return `<strong>Erro de Conexão:</strong> Não foi possível contatar a API do Gemini. Verifique sua conexão ou a chave de API.`;
+                }
+            }
+            function generateReportHTML(geminiAnalysis = '') {
+                const winner = finalResults.length > 0 ? finalResults[0].name : 'N/A';
+                const criteriaTable = criteria.map(c => `<tr><td class="p-2 border">${c.name}</td><td class="p-2 border text-center">${c.type === 'benefit' ? 'Maior é Melhor (▲)' : 'Menor é Melhor (▼)'}</td><td class="p-2 border text-center font-bold">${(c.weight * 100).toFixed(2)}%</td></tr>`).join('');
+                const dataHead = companies.map(name => `<th class="p-2 border">${name}</th>`).join('');
+                const rawDataTable = criteria.map(c => `<tr><td class="p-2 border">${c.name}</td>${companies.map((_, i) => `<td class="p-2 border text-center">${rawData[`data-${c.id}-${i}`] || '-'}</td>`).join('')}</tr>`).join('');
+                const normalizedTable = criteria.map(c => `<tr><td class="p-2 border">${c.name}</td>${companies.map((_, i) => `<td class="p-2 border text-center">${(normalizedScores[`score-${c.id}-${i}`] || 1).toFixed(2)}</td>`).join('')}</tr>`).join('');
+                const resultsTable = finalResults.map((r, i) => `<tr class="${i === 0 ? 'bg-green-100' : ''}"><td class="p-2 border text-center font-bold">${i + 1}º</td><td class="p-2 border">${r.name}</td><td class="p-2 border text-center font-bold">${(r.score * 20).toFixed(2)} / 100</td></tr>`).join('');
+                return `
+                    <div class="space-y-6 print-light-theme">
+                        <div class="text-center"><h2 class="text-2xl font-bold">Relatório de Tomada de Decisão</h2><p class="text-sm text-slate-500">Análise Comparativa de Propostas de Energia Solar</p></div>
+                        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg"><h3 class="text-lg font-semibold">Resumo da Decisão</h3><p>Com base nos critérios e pesos definidos, a proposta da empresa <strong>${winner}</strong> foi classificada como a mais vantajosa.</p></div>
+                        <div><h3 class="text-lg font-semibold mb-2">1. Critérios e Pesos Finais</h3><table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-100"><th class="p-2 border">Critério</th><th class="p-2 border">Tipo</th><th class="p-2 border">Peso Final</th></tr></thead><tbody>${criteriaTable}</tbody></table></div>
+                        <div><h3 class="text-lg font-semibold mb-2">2. Dados das Propostas (Valores Brutos)</h3><table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-100"><th class="p-2 border">Critério</th>${dataHead}</tr></thead><tbody>${rawDataTable}</tbody></table></div>
+                        <div><h3 class="text-lg font-semibold mb-2">3. Pontuações Normalizadas (1-5)</h3><table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-100"><th class="p-2 border">Critério</th>${dataHead}</tr></thead><tbody>${normalizedTable}</tbody></table></div>
+                        <div><h3 class="text-lg font-semibold mb-2">4. Resultado Final</h3><table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-100"><th class="p-2 border">Rank</th><th class="p-2 border">Empresa</th><th class="p-2 border">Pontuação Final</th></tr></thead><tbody>${resultsTable}</tbody></table></div>
+                        <div><h3 class="text-lg font-semibold mb-2">5. Análise da IA (Gemini)</h3><div id="gemini-analysis-content" class="p-4 bg-slate-50 border rounded-lg text-sm min-h-[80px]">${geminiAnalysis}</div></div>
+                        <div class="text-center pt-6 mt-6 border-t text-xs text-slate-400"><p>Produzido por: Daniel Ávila, para o condomínio Morada Nobre em 2025</p></div>
+                    </div>`;
+            }
+            // --- EVENT LISTENERS GERAIS ---
+            const reportModal = document.getElementById('report-modal');
+            document.getElementById('generate-report-btn').addEventListener('click', async () => {
+                const loadingHTML = '<div class="flex items-center gap-3"><div class="loader"></div><p>Analisando dados e gerando insights...</p></div>';
+                document.getElementById('report-content').innerHTML = generateReportHTML(loadingHTML);
+                reportModal.style.display = 'flex';
+                const reportDataText = `Resultado Final: ${JSON.stringify(finalResults)}\nCritérios e Pesos: ${JSON.stringify(criteria)}\nDados Brutos: ${JSON.stringify(rawData)}`;
+                const analysis = await getGeminiAnalysis(reportDataText);
+                document.getElementById('gemini-analysis-content').innerHTML = analysis;
+            });
+            document.getElementById('close-report-btn').addEventListener('click', () => reportModal.style.display = 'none');
+            document.getElementById('close-report-btn-2').addEventListener('click', () => reportModal.style.display = 'none');
+            document.getElementById('print-report-btn').addEventListener('click', () => window.print());
+            const apiModal = document.getElementById('api-settings-modal');
+            document.getElementById('api-settings-btn').addEventListener('click', () => { apiModal.style.display = 'flex'; document.getElementById('api-key-input').value = geminiApiKey; document.getElementById('api-key-feedback').textContent = ''; });
+            document.getElementById('close-api-modal-btn').addEventListener('click', () => apiModal.style.display = 'none');
+            document.getElementById('save-api-key-btn').addEventListener('click', () => {
+                geminiApiKey = document.getElementById('api-key-input').value;
+                localStorage.setItem('geminiApiKey', geminiApiKey);
+                const feedback = document.getElementById('api-key-feedback');
+                feedback.textContent = 'Chave salva com sucesso!';
+                feedback.className = 'text-sm mt-2 text-green-600';
+                setTimeout(() => { apiModal.style.display = 'none'; }, 1500);
+            });
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    lightIcon.classList.remove('hidden');
+                    darkIcon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    darkIcon.classList.remove('hidden');
+                    lightIcon.classList.add('hidden');
+                }
+            };
+            const initialTheme = localStorage.getItem('color-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(initialTheme);
+            themeToggleBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                const newTheme = isDark ? 'light' : 'dark';
+                localStorage.setItem('color-theme', newTheme);
+                applyTheme(newTheme);
+            });
+            geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+            document.getElementById('add-company').addEventListener('click', () => { if (companies.length < 5) { companies.push(`Empresa ${companies.length + 1}`); renderAll(); } });
+            document.getElementById('add-criterion-btn').addEventListener('click', addCriterion);
+            // --- INICIALIZAÇÃO ---
+            renderAll();
+        });
+    </script>
+</body>
+
+</html>
