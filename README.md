@@ -1,6 +1,6 @@
 # analise-de-propostas
 
-Sistema de análise de propostas usando método AHP
+Sistema web simples para análise e tomada de decisão em propostas utilizando o método AHP (Analytic Hierarchy Process).
 
 ## 🚀 Demo
 
